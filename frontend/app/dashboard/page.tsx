@@ -17,7 +17,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/api/mikeka", { cache: "no-store" });
+        const res = await fetch("/api/mikeka", { cache: "no-store" });
         if (res.ok) {
           let rawData = await res.json();
           const topLeagues = ["Premier League", "La Liga", "Serie A", "Bundesliga", "UEFA Champions League"];
@@ -43,7 +43,7 @@ export default function Dashboard() {
           });
 
           // Tunapanga mechi kuanzia zenye Asilimia kubwa zaidi (Kama 85% kwenda chini)
-          allMatches.sort((a, b) => parseInt(b.asilimia) - parseInt(a.asilimia));
+          allMatches.sort((a: any, b: any) => parseInt(b.asilimia) - parseInt(a.asilimia));
 
           // Safe Roll: Mechi 2 za uhakika sana (Top 2)
           setSafeRoll(allMatches.slice(0, 2));
@@ -65,12 +65,12 @@ export default function Dashboard() {
   };
 
   // Kazi ya Kubadilisha Asilimia kuwa ODDS Halisi (Mf. 80% = 1.25 Odds)
-  const getOdds = (probString: string) => {
+  const getOdds = (probString: string): string => {
     const prob = parseInt(probString.replace('%', ''));
-    if (!prob || prob === 0) return 1.00;
+    if (!prob || prob === 0) return "1.00";
     // Tunaongeza margin ndogo ya bookie (0.95) kufanya iwe real
     const odds = (100 / prob) * 0.95; 
-    return odds < 1.01 ? 1.01 : odds.toFixed(2);
+    return odds < 1.01 ? "1.01" : odds.toFixed(2);
   };
 
   // Kazi ya Kupiga Hesabu za Mkeka mzima (Total Odds & Probability)
@@ -80,8 +80,9 @@ export default function Dashboard() {
     let tOdds = 1;
     let tProbDecimal = 1;
 
-    matches.forEach(m => {
-      tOdds *= parseFloat(getOdds(m.asilimia));
+    matches.forEach((m: any) => {
+      // HAPA NDIPO TULIPOREKEBISHA ERROR YA TYPESCRIPT (tumeongeza .toString() kwa usalama)
+      tOdds *= parseFloat(getOdds(m.asilimia).toString());
       tProbDecimal *= (parseInt(m.asilimia) / 100);
     });
 
@@ -94,9 +95,9 @@ export default function Dashboard() {
 
   // Kuongeza/Kutoa mechi kwenye Slip Builder
   const toggleBetslip = (match: any) => {
-    const exists = betslip.find(m => m.id === match.id);
+    const exists = betslip.find((m: any) => m.id === match.id);
     if (exists) {
-      setBetslip(betslip.filter(m => m.id !== match.id));
+      setBetslip(betslip.filter((m: any) => m.id !== match.id));
       showToast("❌ Removed from Slip");
     } else {
       setBetslip([...betslip, match]);
@@ -209,7 +210,7 @@ export default function Dashboard() {
                            </div>
                         </div>
                         <ul className="text-xs text-gray-300 space-y-2 mb-5">
-                          {safeRoll.map((m, i) => (
+                          {safeRoll.map((m: any, i: number) => (
                             <li key={i} className="flex justify-between border-b border-[#26344d] pb-2">
                               <span><b className="text-gray-500">{m.leagueName}:</b> {m.home} vs {m.away}</span> 
                               <span className="text-[#facc15] font-black bg-[#162032] px-2 py-0.5 rounded">{m.ai_tip} <span className="text-gray-500 text-[9px] ml-1">({getOdds(m.asilimia)})</span></span>
@@ -235,7 +236,7 @@ export default function Dashboard() {
                            </div>
                         </div>
                         <ul className="text-xs text-gray-300 space-y-2 mb-5">
-                          {megaAcca.map((m, i) => (
+                          {megaAcca.map((m: any, i: number) => (
                             <li key={i} className="flex justify-between border-b border-[#26344d] pb-2">
                               <span><b className="text-gray-500">{m.leagueName}:</b> {m.home} vs {m.away}</span> 
                               <span className="text-white font-black bg-[#162032] px-2 py-0.5 rounded">{m.ai_tip} <span className="text-gray-500 text-[9px] ml-1">({getOdds(m.asilimia)})</span></span>
@@ -262,7 +263,7 @@ export default function Dashboard() {
                           <div className="flex flex-col divide-y divide-[#1c2638]/50">
                             {/* Tunafupisha Mechi (3 tu kwa kila ligi) */}
                             {ligi.matches?.slice(0, 3).map((mkeka: any) => {
-                              const inSlip = betslip.find(m => m.id === mkeka.id);
+                              const inSlip = betslip.find((m: any) => m.id === mkeka.id);
                               return (
                                 <div key={mkeka.id} className={`p-3 md:p-4 flex flex-col md:flex-row md:items-center justify-between transition duration-200 ${inSlip ? 'bg-[#1e61d4]/10' : 'hover:bg-[#111a2a]'}`}>
                                   <div className="flex-1 flex flex-col gap-1 mb-3 md:mb-0">
@@ -316,7 +317,7 @@ export default function Dashboard() {
                   ) : (
                     <>
                       <ul className="space-y-3 mb-6 max-h-96 overflow-y-auto pr-2">
-                        {betslip.map((m, i) => (
+                        {betslip.map((m: any, i: number) => (
                           <li key={i} className="bg-[#0d1422] p-3 rounded border border-[#26344d] flex justify-between items-center">
                             <div>
                               <p className="text-[9px] text-gray-500 font-bold uppercase">{m.leagueName}</p>
@@ -374,7 +375,7 @@ export default function Dashboard() {
                   </div>
                   
                   <div className="divide-y divide-[#1c2638]/50">
-                    {yesterdayResults.map((r, i) => (
+                    {yesterdayResults.map((r: any, i: number) => (
                       <div key={i} className="p-4 grid grid-cols-12 gap-2 items-center hover:bg-[#111a2a] transition">
                         <div className="col-span-6 md:col-span-5">
                           <p className="font-bold text-sm text-gray-200">{r.home}</p>
