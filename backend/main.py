@@ -1,21 +1,20 @@
 import httpx
 import hashlib
-import psycopg2
+import psycopg
 import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from datetime import date, timedelta, datetime
 from fastapi.middleware.cors import CORSMiddleware
-from psycopg2 import IntegrityError
+from psycopg import IntegrityError
 
 # ==========================================
 # 1. NEON DATABASE CONNECTION (LIVE)
 # ==========================================
-# Link yako ya Neon imewekwa hapa rasmi!
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://neondb_owner:npg_cVuy3hBvPr0Q@ep-wandering-wind-ambvtomk-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
 
 def get_db_connection():
-    return psycopg2.connect(DATABASE_URL)
+    return psycopg.connect(DATABASE_URL)
 
 def init_db():
     conn = get_db_connection()
@@ -71,10 +70,10 @@ def hash_password(password: str):
 
 app = FastAPI(title="Sly Sports Tips API")
 
-# CORS - Inaruhusu Frontend yako iwasiliane na Backend bila kuzuiwa
+# CORS (Inaruhusu Frontend iwasiliane na Backend)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Ukiwa unadeploy Vercel, unaweza kubadilisha iwe URL yako ya website
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -86,13 +85,12 @@ TOP_LEAGUES_IDS = [39, 140, 135, 78, 61, 2, 3, 40, 345, 88, 94]
 # ==========================================
 # 2. CACHING SYSTEM & AI ENGINE
 # ==========================================
-# Kabati la kuhifadhi data za API ili kuokoa limit (Requests)
 API_CACHE = {
     "mikeka": {"data": [], "timestamp": None},
     "results": {"data": [], "timestamp": None},
     "standings": {} 
 }
-CACHE_EXPIRY = timedelta(hours=3) # Data inakaa kwenye ubongo kwa masaa 3
+CACHE_EXPIRY = timedelta(hours=3)
 
 def sly_ai_engine(home_team: str, away_team: str):
     h_hash = int(hashlib.md5(home_team.encode()).hexdigest(), 16) % 100
@@ -110,10 +108,11 @@ def sly_ai_engine(home_team: str, away_team: str):
     else: return "X2", f"{away_prob + draw_prob}%"
 
 # ==========================================
-# 3. ENDPOINTS (FRONTEND & AUTH)
+# 3. ENDPOINTS
 # ==========================================
 @app.get("/")
-def read_root(): return {"message": "Sly Sports API is Live and Connected to Neon!"}
+def read_root(): 
+    return {"message": "Sly Sports API is Live and Connected to Neon!"}
 
 @app.post("/api/register")
 def register_user(user: UserRegister):
@@ -141,7 +140,6 @@ def login_user(user: UserLogin):
     if result: return {"status": "success", "user": {"id": result[0], "name": result[1], "phone": result[2]}}
     raise HTTPException(status_code=401, detail="Kuingia kumeshindikana. Namba au Password si sahihi.")
 
-# --- Kuvuta Mikeka (Yenye Caching) ---
 @app.get("/api/mikeka")
 async def pata_mikeka():
     sasa = datetime.now()
@@ -172,11 +170,11 @@ async def pata_mikeka():
                 API_CACHE["mikeka"]["data"] = res
                 API_CACHE["mikeka"]["timestamp"] = sasa
             return res
-    except:
+    except Exception as e:
+        print("Error fetching API:", e)
         if API_CACHE["mikeka"]["data"]: return API_CACHE["mikeka"]["data"]
         return []
 
-# --- Kuvuta Results (Yenye Caching) ---
 @app.get("/api/results")
 async def pata_matokeo():
     sasa = datetime.now()
@@ -217,66 +215,3 @@ async def pata_matokeo():
     except:
         if API_CACHE["results"]["data"]: return API_CACHE["results"]["data"]
         return []
-
-# --- Kuvuta Standings (Yenye Caching) ---
-@app.get("/api/standings/{league_id}")
-async def pata_msimamo(league_id: int):
-    sasa = datetime.now()
-    if league_id in API_CACHE["standings"] and (sasa - API_CACHE["standings"][league_id]["timestamp"] < CACHE_EXPIRY):
-        return API_CACHE["standings"][league_id]["data"]
-
-    leo = date.today()
-    mwaka1 = str(leo.year) if leo.month >= 8 else str(leo.year - 1)
-    mwaka2 = str(int(mwaka1) - 1)
-    headers = {"x-apisports-key": API_KEY}
-    
-    try:
-        async with httpx.AsyncClient() as client:
-            res1 = await client.get(f"https://v3.football.api-sports.io/standings?league={league_id}&season={mwaka1}", headers=headers, timeout=15.0)
-            data1 = res1.json()
-            result_data = None
-            if data1.get("response"): 
-                result_data = {"league_name": data1["response"][0]["league"]["name"], "logo": data1["response"][0]["league"]["logo"], "standings": data1["response"][0]["league"]["standings"][0]}
-            else:
-                res2 = await client.get(f"https://v3.football.api-sports.io/standings?league={league_id}&season={mwaka2}", headers=headers, timeout=15.0)
-                data2 = res2.json()
-                if data2.get("response"): 
-                    result_data = {"league_name": data2["response"][0]["league"]["name"], "logo": data2["response"][0]["league"]["logo"], "standings": data2["response"][0]["league"]["standings"][0]}
-            if result_data:
-                API_CACHE["standings"][league_id] = {"data": result_data, "timestamp": sasa}
-                return result_data
-            return {"error": "Msimamo haujapatikana."}
-    except: 
-        if league_id in API_CACHE["standings"]: return API_CACHE["standings"][league_id]["data"]
-        return {"error": "Server error."}
-
-# ==========================================
-# 4. ADMIN ENDPOINTS (MASTER PANEL)
-# ==========================================
-@app.get("/api/admin/users")
-def get_all_users():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, name, phone FROM users ORDER BY id DESC")
-    users = [{"id": row[0], "name": row[1], "phone": row[2]} for row in cursor.fetchall()]
-    conn.close()
-    return {"total": len(users), "users": users}
-
-@app.post("/api/admin/slips")
-def create_admin_slip(slip: AdminSlipCreate):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO admin_slips (title, odds, code, bookmaker) VALUES (%s, %s, %s, %s)", 
-                   (slip.title, slip.odds, slip.code, slip.bookmaker))
-    conn.commit()
-    conn.close()
-    return {"status": "success", "message": "Mkeka umewekwa hewani!"}
-
-@app.get("/api/admin/slips")
-def get_admin_slips():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, title, odds, code, bookmaker, status, created_at FROM admin_slips ORDER BY id DESC")
-    slips = [{"id": row[0], "title": row[1], "odds": row[2], "code": row[3], "bookmaker": row[4], "status": row[5], "date": row[6]} for row in cursor.fetchall()]
-    conn.close()
-    return {"total": len(slips), "slips": slips}
