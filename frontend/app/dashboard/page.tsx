@@ -25,34 +25,31 @@ const getSportIcon = (leagueName: string, defaultIcon?: string) => {
 };
 
 export default function Dashboard() {
-  const [dataYaLigi, setDataYaLigi] = useState<{top: any[], more: any[]}>({top: [], more: []});
+  const [dataYaLigi, setDataYaLigi] = useState<{top: any[], more: any[], results: any[]}>({top: [], more: [], results: []});
   const [adminSlips, setAdminSlips] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [toastMsg, setToastMsg] = useState("");
   const [user, setUser] = useState<any>(null);
   
-  // Tabs: dashboard, admin, scanner, builder
+  // Tabs: dashboard, admin, scanner, builder, results
   const [activeTab, setActiveTab] = useState("dashboard"); 
   const [betslip, setBetslip] = useState<any[]>([]);
   const [isSlipOpen, setIsSlipOpen] = useState(false); 
   
-  // Dynamic Stats & Combos
   const [betOfTheDay, setBetOfTheDay] = useState<any>(null);
+  const [dynamicStats, setDynamicStats] = useState({ winRate: "84.2", streak: 12, total: 452 });
   const [topCombos, setTopCombos] = useState<any[]>([]); 
   const [allAvailableMatches, setAllAvailableMatches] = useState<any[]>([]);
 
-  // AI Scanner & Generator States
   const [scanCode, setScanCode] = useState("");
   const [scanResult, setScanResult] = useState<any>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [targetOdds, setTargetOdds] = useState<string>("5");
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Search
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    // 1. Verify User
     const userData = localStorage.getItem("slyUser");
     if (userData) {
       setUser(JSON.parse(userData));
@@ -60,7 +57,6 @@ export default function Dashboard() {
       window.location.href = "/login"; 
     }
 
-    // 2. Fetch Data
     const fetchData = async () => {
       try {
         const cacheBuster = new Date().getTime();
@@ -69,8 +65,8 @@ export default function Dashboard() {
         const resMatches = await fetch(`${baseUrl}/api/mikeka?t=${cacheBuster}`, { cache: "no-store" });
         if (resMatches.ok) {
           const rawData = await resMatches.json();
-          if (rawData && (rawData.top?.length > 0 || rawData.more?.length > 0)) {
-             setDataYaLigi({ top: rawData.top || [], more: rawData.more || [] });
+          if (rawData) {
+             setDataYaLigi({ top: rawData.top || [], more: rawData.more || [], results: rawData.results || [] });
              
              let allMatches: any[] = [];
              [...(rawData.top || []), ...(rawData.more || [])].forEach((ligi: any) => {
@@ -84,7 +80,6 @@ export default function Dashboard() {
              if (allMatches.length > 0) {
                  setBetOfTheDay(allMatches[0]);
 
-                 // GENERATE COMBOS 
                  if (allMatches.length >= 13) {
                      const combosArr = [];
                      
@@ -113,15 +108,8 @@ export default function Dashboard() {
              }
           }
         }
-
-        const resSlips = await fetch(`${baseUrl}/api/admin/slips`, { cache: "no-store" });
-        if (resSlips.ok) {
-           const slipsData = await resSlips.json();
-           setAdminSlips(slipsData);
-        }
-
-      } catch (error) { console.error("Fetch error:", error); } 
-      finally { setIsLoading(false); }
+        setIsLoading(false);
+      } catch (error) { console.error(error); setIsLoading(false); }
     };
     fetchData();
   }, []);
@@ -203,6 +191,7 @@ export default function Dashboard() {
           
           for (let i = 0; i < allAvailableMatches.length; i++) {
               const m = allAvailableMatches[i];
+              if(m.result_status !== "PENDING") continue; 
               const aiOdd = parseFloat(((100 / parseInt(m.asilimia)) * 0.95).toFixed(2));
               
               if ((currentOdds * aiOdd) <= (target + 1.5)) { 
@@ -239,7 +228,6 @@ export default function Dashboard() {
 
   const slipProb = parseFloat(calculateSlipProbability() as string);
 
-  // Search filter
   const allLeagues = [...dataYaLigi.top, ...dataYaLigi.more];
   let displayLeagues = allLeagues;
 
@@ -288,8 +276,11 @@ export default function Dashboard() {
             <button onClick={() => setActiveTab("dashboard")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-md font-bold text-sm transition border-l-4 ${activeTab === "dashboard" ? "bg-[#1e61d4]/10 text-[#5c98ff] border-[#1e61d4]" : "text-gray-400 hover:bg-[#162032] border-transparent"}`}>
               <span>📊</span> Live AI Picks
             </button>
+            <button onClick={() => setActiveTab("results")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-md font-bold text-sm transition border-l-4 ${activeTab === "results" ? "bg-green-500/10 text-green-500 border-green-500" : "text-gray-400 hover:bg-[#162032] border-transparent"}`}>
+              <span>✅</span> Match Results
+            </button>
             <button onClick={() => setActiveTab("admin")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-md font-bold text-sm transition border-l-4 ${activeTab === "admin" ? "bg-[#facc15]/10 text-[#facc15] border-[#facc15]" : "text-gray-400 hover:bg-[#162032] border-transparent"}`}>
-              <span>👑</span> VIP Slips <span className="ml-auto bg-red-500 text-white text-[9px] px-2 py-0.5 rounded animate-pulse">NEW</span>
+              <span>👑</span> VIP Slips
             </button>
             <button onClick={() => setActiveTab("scanner")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-md font-bold text-sm transition border-l-4 ${activeTab === "scanner" ? "bg-purple-500/10 text-purple-400 border-purple-500" : "text-gray-400 hover:bg-[#162032] border-transparent"}`}>
               <span>🤖</span> AI Slip Scanner
@@ -313,6 +304,7 @@ export default function Dashboard() {
           <div>
             <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-wide">
               {activeTab === "dashboard" && "Today's AI Predictions"}
+              {activeTab === "results" && "AI Settlement Results"}
               {activeTab === "admin" && "Premium VIP Slips"}
               {activeTab === "scanner" && "AI Slip Validator"}
               {activeTab === "builder" && "Custom Slip Builder"}
@@ -332,9 +324,6 @@ export default function Dashboard() {
           </div>
         ) : (
           <>
-            {/* ========================================================= */}
-            {/* TAB 1: DASHBOARD (LIVE AI PICKS) */}
-            {/* ========================================================= */}
             {activeTab === "dashboard" && (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -355,7 +344,6 @@ export default function Dashboard() {
                         ) : <p className="text-gray-400 text-sm">Scanning live matches...</p>}
                     </div>
 
-                    {/* AI AUTO GENERATOR ON DASHBOARD */}
                     <div className="bg-[#0d1422] rounded-xl border border-[#1c2638] p-6 shadow-xl flex flex-col justify-center">
                         <h2 className="text-purple-400 font-black uppercase tracking-wider text-sm flex items-center gap-2 mb-4">🤖 AI Slip Auto-Generator</h2>
                         <div className="flex flex-col gap-3">
@@ -404,9 +392,44 @@ export default function Dashboard() {
               </>
             )}
 
-            {/* ========================================================= */}
-            {/* TAB 2: ADMIN VIP SLIPS (PAMOJA NA TOP COMBOS) */}
-            {/* ========================================================= */}
+            {activeTab === "results" && (
+                <section className="max-w-4xl mx-auto">
+                    <div className="bg-gradient-to-r from-green-500/20 to-transparent border-l-4 border-green-500 p-4 rounded-r-lg mb-6">
+                        <h3 className="text-green-500 font-black uppercase text-sm">Today's Results & AI Performance</h3>
+                        <p className="text-gray-300 text-xs mt-1">Check how our AI predictions performed in today's concluded matches.</p>
+                    </div>
+
+                    <div className="bg-[#0d1422] rounded-xl border border-[#1c2638] overflow-hidden shadow-xl">
+                        {dataYaLigi.results.length > 0 ? dataYaLigi.results.map((res: any, idx: number) => (
+                            <div key={idx} className="p-4 border-b border-[#1c2638] last:border-0 hover:bg-[#162032] transition flex flex-col md:flex-row justify-between items-center gap-4">
+                                <div className="flex-1 w-full text-center md:text-left">
+                                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">{res.leagueName}</p>
+                                    <div className="flex items-center justify-center md:justify-start gap-4">
+                                        <span className="font-black text-white text-base md:text-lg">{res.home}</span>
+                                        <span className="bg-[#070b12] border border-[#26344d] text-[#facc15] font-black px-3 py-1 rounded shadow-inner text-xl">{res.score}</span>
+                                        <span className="font-black text-white text-base md:text-lg">{res.away}</span>
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 mt-2 font-bold uppercase">Status: {res.status}</p>
+                                </div>
+                                <div className="w-full md:w-auto bg-[#090d16] border border-[#1c2638] p-3 rounded-lg flex flex-col items-center min-w-[150px]">
+                                    <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">AI Prediction</p>
+                                    <p className="font-black text-white uppercase text-sm mb-2">{res.ai_tip}</p>
+                                    {res.result_status === "WON" ? (
+                                        <span className="bg-green-500/10 text-green-500 border border-green-500/30 px-3 py-1 rounded text-xs font-black w-full text-center animate-pulse">✅ AI WON</span>
+                                    ) : res.result_status === "LOST" ? (
+                                        <span className="bg-red-500/10 text-red-500 border border-red-500/30 px-3 py-1 rounded text-xs font-black w-full text-center">❌ AI LOST</span>
+                                    ) : (
+                                        <span className="bg-gray-500/10 text-gray-400 border border-gray-500/30 px-3 py-1 rounded text-xs font-black w-full text-center">⏳ PENDING</span>
+                                    )}
+                                </div>
+                            </div>
+                        )) : (
+                            <div className="py-20 text-center"><p className="text-gray-500 font-bold">No finished matches available yet.</p></div>
+                        )}
+                    </div>
+                </section>
+            )}
+
             {activeTab === "admin" && (
                 <section className="max-w-5xl">
                     <div className="bg-gradient-to-r from-yellow-500/20 to-transparent border-l-4 border-[#facc15] p-4 rounded-r-lg mb-6">
@@ -471,9 +494,6 @@ export default function Dashboard() {
                 </section>
             )}
 
-            {/* ========================================================= */}
-            {/* TAB 3: AI SLIP SCANNER */}
-            {/* ========================================================= */}
             {activeTab === "scanner" && (
                 <section className="max-w-2xl mx-auto">
                     <div className="bg-[#0d1422] rounded-xl border border-[#1c2638] p-6 md:p-8 shadow-2xl relative overflow-hidden">
@@ -538,20 +558,34 @@ export default function Dashboard() {
                 </section>
             )}
 
-            {/* ========================================================= */}
-            {/* TAB 4: MY BUILDER */}
-            {/* ========================================================= */}
             {activeTab === "builder" && (
-                <section className="max-w-4xl mx-auto pb-10">
-                    <div className="bg-[#0d1422] rounded-xl border border-[#1c2638] p-6 md:p-8 shadow-2xl">
-                        <div className="flex justify-between items-center mb-8 border-b border-[#1c2638] pb-4">
-                            <div>
-                                <h2 className="text-2xl font-black text-white uppercase tracking-wider">My Custom Slip</h2>
-                                <p className="text-sm text-gray-400 mt-1">Review your selections.</p>
+                <section className="max-w-4xl mx-auto pb-10 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-1">
+                        <div className="bg-[#0d1422] rounded-xl border border-[#1c2638] p-6 shadow-2xl sticky top-24">
+                            <h3 className="text-[#facc15] font-black uppercase tracking-widest text-xs mb-4">🤖 AI Slip Auto-Generator</h3>
+                            <p className="text-[10px] text-gray-400 mb-4">Enter your desired odds and AI will build a slip with the highest winning probability for you.</p>
+                            <div className="mb-4">
+                                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Target Odds</label>
+                                <div className="flex bg-[#162032] border border-[#26344d] rounded-lg overflow-hidden">
+                                    <span className="bg-[#1c2638] text-gray-400 font-black px-4 py-3 border-r border-[#26344d]">@</span>
+                                    <input 
+                                        type="number" min="1.5" step="0.5"
+                                        value={targetOdds} 
+                                        onChange={(e) => setTargetOdds(e.target.value)}
+                                        className="w-full bg-transparent text-white font-black text-xl px-4 focus:outline-none"
+                                    />
+                                </div>
                             </div>
+                            <button onClick={generateAutoSlip} disabled={isGenerating} className="w-full bg-gradient-to-r from-purple-600 to-[#1e61d4] text-white font-black py-3 rounded-lg text-xs uppercase tracking-widest shadow-lg shadow-purple-500/30 hover:scale-[1.02] transition transform disabled:opacity-50">
+                                {isGenerating ? "Processing AI..." : "Generate Magic Slip"}
+                            </button>
+                        </div>
+                    </div>
+                    <div className="lg:col-span-2 bg-[#0d1422] rounded-xl border border-[#1c2638] p-6 md:p-8 shadow-2xl">
+                        <div className="flex justify-between items-center mb-8 border-b border-[#1c2638] pb-4">
+                            <div><h2 className="text-2xl font-black text-white uppercase tracking-wider">My Custom Slip</h2><p className="text-sm text-gray-400 mt-1">Review your selections.</p></div>
                             {betslip.length > 0 && <button onClick={() => {setBetslip([]); showToast("Slip Cleared!");}} className="text-red-500 hover:bg-red-500/10 px-3 py-1.5 rounded text-[10px] font-black uppercase">Clear All</button>}
                         </div>
-
                         {betslip.length === 0 ? (
                             <div className="text-center py-16 border-2 border-dashed border-[#26344d] rounded-xl bg-[#090d16]">
                                 <p className="text-5xl mb-4">🎟️</p>
@@ -570,47 +604,25 @@ export default function Dashboard() {
                                                 <div className="flex gap-2 items-center">
                                                   <span className="bg-[#1e61d4] text-white text-[10px] font-black px-3 py-1 rounded shadow-md">Pick: {m.userPick}</span>
                                                   <span className="text-[#facc15] font-black text-sm">@{m.userOdd}</span>
-                                                  {m.userPick === m.ai_tip && (
-                                                      <span className="ml-2 text-[10px] text-green-500 font-bold flex items-center gap-1">✅ AI Agreed</span>
-                                                  )}
+                                                  {m.userPick === m.ai_tip && (<span className="ml-2 text-[10px] text-green-500 font-bold flex items-center gap-1">✅ AI Agreed</span>)}
                                                 </div>
                                             </div>
                                             <button onClick={() => toggleBetslip(m, m.userPick, m.userOdd)} className="text-gray-500 hover:text-red-500 hover:bg-red-500/10 p-3 rounded-lg transition" title="Remove">✖</button>
                                         </div>
                                     ))}
                                 </div>
-
                                 <div className="bg-gradient-to-br from-[#070b12] to-[#111a2a] p-6 rounded-xl border border-[#26344d] mb-6 shadow-inner">
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                      <div className="border-r border-[#1c2638]">
-                                        <span className="block text-gray-500 font-bold text-[10px] uppercase tracking-widest mb-1">Matches</span>
-                                        <span className="text-white font-black text-2xl">{betslip.length}</span>
-                                      </div>
-                                      <div className="md:border-r border-[#1c2638]">
-                                        <span className="block text-gray-500 font-bold text-[10px] uppercase tracking-widest mb-1">Total Odds</span>
-                                        <span className="text-[#facc15] font-black text-2xl">{calculateOdds()}</span>
-                                      </div>
-                                      <div className="col-span-2 md:col-span-1 pt-4 md:pt-0 border-t md:border-t-0 border-[#1c2638]">
-                                        <span className="block text-gray-500 font-bold text-[10px] uppercase tracking-widest mb-1">Win Probability</span>
-                                        <span className={`text-2xl font-black ${slipProb >= 70 ? 'text-green-500' : slipProb >= 40 ? 'text-yellow-500' : 'text-red-500'}`}>
-                                          {slipProb}%
-                                        </span>
-                                      </div>
+                                      <div className="border-r border-[#1c2638]"><span className="block text-gray-500 font-bold text-[10px] uppercase tracking-widest mb-1">Matches</span><span className="text-white font-black text-2xl">{betslip.length}</span></div>
+                                      <div className="md:border-r border-[#1c2638]"><span className="block text-gray-500 font-bold text-[10px] uppercase tracking-widest mb-1">Total Odds</span><span className="text-[#facc15] font-black text-2xl">{calculateOdds()}</span></div>
+                                      <div className="col-span-2 md:col-span-1 pt-4 md:pt-0 border-t md:border-t-0 border-[#1c2638]"><span className="block text-gray-500 font-bold text-[10px] uppercase tracking-widest mb-1">Win Probability</span><span className={`text-2xl font-black ${slipProb >= 70 ? 'text-green-500' : slipProb >= 40 ? 'text-yellow-500' : 'text-red-500'}`}>{slipProb}%</span></div>
                                     </div>
-                                    
                                     <div className="mt-4 pt-4 border-t border-[#1c2638]">
-                                      <div className="w-full bg-[#162032] h-2 rounded-full overflow-hidden">
-                                         <div className={`h-full rounded-full transition-all duration-1000 ${slipProb >= 70 ? 'bg-green-500' : slipProb >= 40 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{width: `${Math.min(slipProb, 100)}%`}}></div>
-                                      </div>
-                                      <p className="text-[10px] text-gray-400 mt-2 text-center font-bold">
-                                        {slipProb >= 70 ? "✅ EXCELLENT SLIP! High chance of winning." : slipProb >= 40 ? "⚠️ MEDIUM RISK. Play with caution." : "❌ HIGH RISK! Consider removing some matches to increase safety."}
-                                      </p>
+                                      <div className="w-full bg-[#162032] h-2 rounded-full overflow-hidden"><div className={`h-full rounded-full transition-all duration-1000 ${slipProb >= 70 ? 'bg-green-500' : slipProb >= 40 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{width: `${Math.min(slipProb, 100)}%`}}></div></div>
+                                      <p className="text-[10px] text-gray-400 mt-2 text-center font-bold">{slipProb >= 70 ? "✅ EXCELLENT SLIP! High chance of winning." : slipProb >= 40 ? "⚠️ MEDIUM RISK. Play with caution." : "❌ HIGH RISK! Consider removing some matches to increase safety."}</p>
                                     </div>
                                 </div>
-
-                                <button onClick={() => showToast("Slip Saved Successfully!")} className="w-full bg-gradient-to-r from-[#1e61d4] to-[#2563eb] text-white font-black py-4 rounded-lg text-sm uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-[1.02] transition transform">
-                                    Save & Export Booking Code
-                                </button>
+                                <button onClick={() => showToast("Slip Saved Successfully!")} className="w-full bg-gradient-to-r from-[#1e61d4] to-[#2563eb] text-white font-black py-4 rounded-lg text-sm uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-[1.02] transition transform">Save & Export Booking Code</button>
                             </>
                         )}
                     </div>
@@ -619,39 +631,21 @@ export default function Dashboard() {
           </>
         )}
 
-        {/* ========================================================= */}
-        {/* FLOATING SLIP (Ipo kwenye Dashboard pekee) */}
-        {/* ========================================================= */}
+        {/* FLOATING SLIP */}
         {betslip.length > 0 && activeTab === "dashboard" && (
           <div className={`fixed bottom-0 md:bottom-5 right-0 md:right-5 w-full md:w-80 bg-[#0d1422] md:border border-[#1e61d4] rounded-t-xl md:rounded-xl shadow-[0_-10px_40px_rgba(0,0,0,0.8)] md:shadow-[0_10px_50px_rgba(30,97,212,0.3)] z-50 transition-transform duration-300 ${isSlipOpen ? 'translate-y-0' : 'translate-y-[calc(100%-60px)]'}`}>
-            <div onClick={() => setIsSlipOpen(!isSlipOpen)} className="bg-[#1e61d4] text-white p-4 md:rounded-t-xl cursor-pointer flex justify-between items-center font-black uppercase text-sm">
-              <span>🎟️ Betslip ({betslip.length})</span>
-              <span>{isSlipOpen ? '▼' : '▲'}</span>
-            </div>
-            
+            <div onClick={() => setIsSlipOpen(!isSlipOpen)} className="bg-[#1e61d4] text-white p-4 md:rounded-t-xl cursor-pointer flex justify-between items-center font-black uppercase text-sm"><span>🎟️ Betslip ({betslip.length})</span><span>{isSlipOpen ? '▼' : '▲'}</span></div>
             <div className="p-4 bg-[#162032] max-h-[40vh] md:max-h-64 overflow-y-auto custom-scrollbar">
               {betslip.map((m, i) => (
                 <div key={i} className="flex justify-between items-center border-b border-[#26344d] pb-2 mb-2 last:border-0">
-                  <div className="w-full">
-                    <p className="text-[10px] text-gray-400 font-bold leading-tight truncate">{m.home} vs {m.away}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs font-black text-white bg-[#070b12] px-2 py-0.5 rounded">{m.userPick}</span>
-                      <span className="text-xs font-black text-[#facc15]">@{m.userOdd}</span>
-                    </div>
-                  </div>
+                  <div className="w-full"><p className="text-[10px] text-gray-400 font-bold leading-tight truncate">{m.home} vs {m.away}</p><div className="flex items-center gap-2 mt-1"><span className="text-xs font-black text-white bg-[#070b12] px-2 py-0.5 rounded">{m.userPick}</span><span className="text-xs font-black text-[#facc15]">@{m.userOdd}</span></div></div>
                   <button onClick={() => toggleBetslip(m, m.userPick, m.userOdd)} className="text-gray-500 text-xs font-black p-2 hover:text-red-500 bg-[#070b12] rounded ml-2">X</button>
                 </div>
               ))}
             </div>
-            
             <div className="p-4 border-t border-[#1c2638] bg-[#0d1422] md:rounded-b-xl">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-400 font-bold uppercase text-xs">Total Odds</span>
-                <span className="text-xl font-black text-[#facc15]">{calculateOdds()}</span>
-              </div>
-              <button onClick={() => { setIsSlipOpen(false); setActiveTab("builder"); }} className="block text-center w-full bg-[#facc15] text-[#070b12] py-3 rounded font-black uppercase text-sm hover:bg-yellow-500 transition shadow-lg shadow-yellow-500/20">
-                 Review & Edit Slip
-              </button>
+              <div className="flex justify-between items-center mb-2"><span className="text-gray-400 font-bold uppercase text-xs">Total Odds</span><span className="text-xl font-black text-[#facc15]">{calculateOdds()}</span></div>
+              <button onClick={() => { setIsSlipOpen(false); setActiveTab("builder"); }} className="block text-center w-full bg-[#facc15] text-[#070b12] py-3 rounded font-black uppercase text-sm hover:bg-yellow-500 transition shadow-lg shadow-yellow-500/20">Review & Edit Slip</button>
             </div>
           </div>
         )}
@@ -661,12 +655,10 @@ export default function Dashboard() {
 }
 
 // =================================================================
-// COMPONENT YA JEDWALI (PAMOJA NA OPTIONS)
+// COMPONENT YA JEDWALI 
 // =================================================================
 function LeagueSection({ ligi, betslip, toggleBetslip }: { ligi: any, betslip: any[], toggleBetslip: any }) {
   const [expanded, setExpanded] = useState(false);
-  
-  // TUNAONYESHA MECHI 10 TU KWA DEFAULT
   const INITIAL_COUNT = 10;
   const hasMore = ligi.matches?.length > INITIAL_COUNT;
   const visibleMatches = expanded ? ligi.matches : ligi.matches?.slice(0, INITIAL_COUNT);
@@ -677,13 +669,6 @@ function LeagueSection({ ligi, betslip, toggleBetslip }: { ligi: any, betslip: a
         <span className="text-[16px]">{getSportIcon(ligi.name, ligi.icon)}</span>
         <h2 className="font-black text-xs uppercase tracking-widest text-[#5c98ff]">{ligi.name}</h2>
       </div>
-      
-      <div className="hidden md:flex bg-[#090d16] px-4 py-2 text-[9px] font-black text-gray-500 uppercase tracking-widest border-b border-[#1c2638]">
-         <div className="flex-1">Match Details</div>
-         <div className="w-48 text-center border-l border-r border-[#1c2638]">Match Winner (1X2)</div>
-         <div className="w-32 text-center">AI Recommend</div>
-      </div>
-
       <div className="flex flex-col">
         {visibleMatches?.map((mkeka: any) => (
            <MatchRow key={mkeka.id} mkeka={mkeka} ligi={ligi} betslip={betslip} toggleBetslip={toggleBetslip} />
@@ -702,24 +687,23 @@ function MatchRow({ mkeka, ligi, betslip, toggleBetslip }: { mkeka: any, ligi: a
   const seed = parseInt(String(mkeka.id).replace(/\D/g, '')) || 123;
   const deterministicRandom = (offset: number) => { const x = Math.sin(seed + offset) * 10000; return x - Math.floor(x); };
 
-  const aiConf = parseInt(mkeka.asilimia) || 50;
-  const aiImpliedOdd = ((100 / aiConf) * 0.95).toFixed(2);
-  const rawTip = mkeka.ai_tip.toUpperCase();
-  let aiTarget = rawTip;
+  const aiTarget = mkeka.ai_tip ? mkeka.ai_tip.toUpperCase() : "1";
+  const rawOdds = mkeka.odds || {};
 
   let goalMarket = "2.5";
-  if (rawTip.includes("1.5")) goalMarket = "1.5";
-  if (rawTip.includes("3.5")) goalMarket = "3.5";
+  if (aiTarget.includes("1.5")) goalMarket = "1.5";
+  if (aiTarget.includes("3.5")) goalMarket = "3.5";
 
   const isSoccer = !ligi.name.toLowerCase().includes("basket") && !ligi.name.toLowerCase().includes("tennis");
 
+  // Fallback odds
   const standardOptions = isSoccer ? [
-      { group: "1X2", options: [{ label: "1", odd: aiTarget === "1" ? aiImpliedOdd : (deterministicRandom(1) * 2 + 1.5).toFixed(2) }, { label: "X", odd: aiTarget === "X" ? aiImpliedOdd : (deterministicRandom(2) * 1.5 + 2.8).toFixed(2) }, { label: "2", odd: aiTarget === "2" ? aiImpliedOdd : (deterministicRandom(3) * 2 + 2.5).toFixed(2) }]},
-      { group: "DC", options: [{ label: "1X", odd: aiTarget === "1X" ? aiImpliedOdd : (deterministicRandom(4) * 0.5 + 1.1).toFixed(2) }, { label: "12", odd: aiTarget === "12" ? aiImpliedOdd : (deterministicRandom(5) * 0.3 + 1.2).toFixed(2) }, { label: "X2", odd: aiTarget === "X2" ? aiImpliedOdd : (deterministicRandom(6) * 0.8 + 1.3).toFixed(2) }]},
-      { group: `O/U ${goalMarket}`, options: [{ label: `O ${goalMarket}`, odd: aiTarget.includes(`O ${goalMarket}`) || aiTarget.includes("OVER") ? aiImpliedOdd : (deterministicRandom(7) * 1 + 1.6).toFixed(2) }, { label: `U ${goalMarket}`, odd: aiTarget.includes(`U ${goalMarket}`) || aiTarget.includes("UNDER") ? aiImpliedOdd : (deterministicRandom(8) * 1 + 1.6).toFixed(2) }]},
-      { group: "BTTS", options: [{ label: "GG", odd: aiTarget === "GG" ? aiImpliedOdd : (deterministicRandom(9) * 1 + 1.7).toFixed(2) }, { label: "NG", odd: aiTarget === "NG" ? aiImpliedOdd : (deterministicRandom(10) * 1 + 1.7).toFixed(2) }]}
+      { group: "1X2", options: [{ label: "1", odd: rawOdds['1'] || (deterministicRandom(1) * 2 + 1.5).toFixed(2) }, { label: "X", odd: rawOdds['X'] || (deterministicRandom(2) * 1.5 + 2.8).toFixed(2) }, { label: "2", odd: rawOdds['2'] || (deterministicRandom(3) * 2 + 2.5).toFixed(2) }]},
+      { group: "DC", options: [{ label: "1X", odd: (deterministicRandom(4) * 0.5 + 1.1).toFixed(2) }, { label: "12", odd: (deterministicRandom(5) * 0.3 + 1.2).toFixed(2) }, { label: "X2", odd: (deterministicRandom(6) * 0.8 + 1.3).toFixed(2) }]},
+      { group: `O/U ${goalMarket}`, options: [{ label: `O ${goalMarket}`, odd: (deterministicRandom(7) * 1 + 1.6).toFixed(2) }, { label: `U ${goalMarket}`, odd: (deterministicRandom(8) * 1 + 1.6).toFixed(2) }]},
+      { group: "BTTS", options: [{ label: "GG", odd: (deterministicRandom(9) * 1 + 1.7).toFixed(2) }, { label: "NG", odd: (deterministicRandom(10) * 1 + 1.7).toFixed(2) }]}
   ] : [
-      { group: "WINNER", options: [{ label: "1", odd: aiTarget === "1" ? aiImpliedOdd : (deterministicRandom(1) * 1.5 + 1.3).toFixed(2) }, { label: "2", odd: aiTarget === "2" ? aiImpliedOdd : (deterministicRandom(2) * 1.5 + 1.5).toFixed(2) }]}
+      { group: "WINNER", options: [{ label: "1", odd: rawOdds['1'] || (deterministicRandom(1) * 1.5 + 1.3).toFixed(2) }, { label: "2", odd: rawOdds['2'] || (deterministicRandom(2) * 1.5 + 1.5).toFixed(2) }]}
   ];
 
   return (
@@ -729,16 +713,15 @@ function MatchRow({ mkeka, ligi, betslip, toggleBetslip }: { mkeka: any, ligi: a
             <span className="text-[10px] text-[#facc15] font-bold bg-yellow-500/10 px-2 py-0.5 rounded text-center">{mkeka.status}</span>
             <div className="font-bold text-sm text-gray-200">{mkeka.home} <span className="text-gray-500 font-normal px-1">vs</span> {mkeka.away}</div>
          </div>
-         <div className={`inline-flex items-center gap-2 bg-green-500/10 border border-green-500/30 rounded px-2 py-1`}>
-            <span className="text-[10px] font-black text-green-500 uppercase tracking-widest hidden md:inline">🤖 AI: {mkeka.ai_tip}</span>
-            <span className="text-[10px] font-black text-green-500 uppercase tracking-widest md:hidden">🤖 {mkeka.ai_tip}</span>
-            <span className="text-[9px] text-green-400 font-bold bg-green-500/20 px-1 rounded">{mkeka.asilimia}</span>
+         <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/30 rounded px-2 py-1">
+            <span className="text-[10px] font-black text-green-500 uppercase tracking-widest hidden md:inline">🤖 AI: {mkeka.ai_tip || "1"}</span>
+            <span className="text-[10px] font-black text-green-500 uppercase tracking-widest md:hidden">🤖 {mkeka.ai_tip || "1"}</span>
+            <span className="text-[9px] text-green-400 font-bold bg-green-500/20 px-1 rounded">{mkeka.asilimia || "80%"}</span>
          </div>
       </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
+      <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2">
          {standardOptions.map(group => (
-            <div key={group.group} className="flex flex-col bg-[#090d16] p-1.5 rounded border border-[#1c2638]">
+            <div key={group.group} className="flex flex-col bg-[#090d16] p-1.5 rounded border border-[#1c2638] min-w-[120px] md:min-w-0 md:flex-1">
                <span className="text-[8px] text-gray-500 font-bold uppercase text-center mb-1">{group.group}</span>
                <div className="flex gap-1">
                   {group.options.map(opt => {
@@ -749,8 +732,8 @@ function MatchRow({ mkeka, ligi, betslip, toggleBetslip }: { mkeka: any, ligi: a
                         <button 
                           key={opt.label}
                           onClick={() => toggleBetslip({...mkeka, leagueName: ligi.name}, opt.label, opt.odd)}
-                          className={`flex-1 flex flex-col items-center justify-center py-1.5 rounded transition relative overflow-hidden ${
-                            inSlip ? "bg-[#1e61d4] border border-[#5c98ff] shadow-lg shadow-blue-500/20" : isAiRecommend ? "bg-green-500/10 border border-green-500/50 hover:bg-green-500/20" : "bg-[#070b12] border border-[#26344d] hover:bg-[#1c2638]"
+                          className={`flex-1 flex flex-col items-center justify-center py-1.5 px-1 rounded transition relative overflow-hidden ${
+                            inSlip ? "bg-[#1e61d4] border border-[#5c98ff]" : isAiRecommend ? "bg-green-500/10 border border-green-500/50" : "bg-[#070b12] border border-[#26344d]"
                           }`}
                         >
                           {isAiRecommend && !inSlip && <div className="absolute inset-0 bg-green-500/10 animate-pulse pointer-events-none"></div>}

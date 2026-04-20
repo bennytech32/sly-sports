@@ -32,147 +32,107 @@ def get_db_connection():
 try:
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name VARCHAR(255), phone VARCHAR(50) UNIQUE, password VARCHAR(255))')
+    cursor.execute('CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name VARCHAR(255), phone VARCHAR(50) UNIQUE, password VARCHAR(255), role VARCHAR(20) DEFAULT \'user\', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)')
     cursor.execute('CREATE TABLE IF NOT EXISTS system_cache (cache_key VARCHAR(50) PRIMARY KEY, cache_data JSONB, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)')
     cursor.execute('CREATE TABLE IF NOT EXISTS admin_slips (id SERIAL PRIMARY KEY, title VARCHAR(255), code VARCHAR(50), odds VARCHAR(20), bookmaker VARCHAR(50), status VARCHAR(50) DEFAULT \'Active\', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)')
+    
+    # Ingiza Admin wa kwanza kama hayupo
+    cursor.execute("INSERT INTO users (name, phone, password, role) VALUES ('Master Admin', 'admin', 'admin123', 'admin') ON CONFLICT (phone) DO NOTHING")
     conn.commit()
     conn.close()
 except: pass
 
 # ==========================================
-# 2. AI ANALYSIS ENGINE 
+# 2. AI ENGINE
 # ==========================================
 def premium_ai_engine(home_name, away_name, league_name):
     combined = (home_name + away_name).encode()
     hash_val = int(hashlib.md5(combined).hexdigest(), 16)
-    
-    tips = ["Home Win (1)", "Away Win (2)", "Over 1.5", "1X", "X2", "GG", "Under 3.5"]
-    tip = tips[hash_val % len(tips)]
-    
-    prob = 75 + (hash_val % 20) 
-    return tip, f"{prob}%"
+    tips = ["1", "2", "Over 1.5", "1X", "X2", "GG", "Under 3.5"]
+    return tips[hash_val % len(tips)], f"{75 + (hash_val % 20)}%"
+
+def ai_bet_settlement(tip, home_goals, away_goals, status):
+    if status not in ["FT", "AET", "PEN"]: return "PENDING"
+    try:
+        h, a = int(home_goals), int(away_goals)
+        tg, t = h + a, tip.upper()
+        if "1X" in t: return "WON" if h >= a else "LOST"
+        if "X2" in t: return "WON" if a >= h else "LOST"
+        if t == "1": return "WON" if h > a else "LOST"
+        if t == "2": return "WON" if a > h else "LOST"
+        if t == "X": return "WON" if h == a else "LOST"
+        if "OVER 1.5" in t: return "WON" if tg > 1.5 else "LOST"
+        if "UNDER 3.5" in t: return "WON" if tg < 3.5 else "LOST"
+        if "GG" in t: return "WON" if h > 0 and a > 0 else "LOST"
+        if "NG" in t: return "WON" if h == 0 or a == 0 else "LOST"
+    except: pass
+    return "PENDING"
 
 # ==========================================
-# 3. FAST FETCH API (SORTED BY POPULARITY)
+# 3. LIVE MATCHES API
 # ==========================================
 @app.get("/api/mikeka")
 async def pata_mikeka():
     sasa = datetime.now()
-    cache_key = 'premium_world_v2'
+    cache_key = 'premium_world_v4'
     
-    # 1. Kinga ya Quota
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT cache_data, updated_at FROM system_cache WHERE cache_key = %s", (cache_key,))
         row = cursor.fetchone()
         conn.close()
-        if row and (sasa - row[1]) < timedelta(hours=2):
-            return row[0]
+        if row and (sasa - row[1]) < timedelta(minutes=10): return row[0]
     except: pass
 
-    headers = {
-        'x-apisports-key': API_KEY,
-        'x-rapidapi-host': 'v3.football.api-sports.io'
-    }
-    
-    tarehe_leo = sasa.strftime('%Y-%m-%d')
-    url = f"{BASE_URL}/fixtures?date={tarehe_leo}"
+    headers = {'x-apisports-key': API_KEY, 'x-rapidapi-host': 'v3.football.api-sports.io'}
+    url = f"{BASE_URL}/fixtures?date={sasa.strftime('%Y-%m-%d')}"
     
     try:
         async with httpx.AsyncClient() as client:
             res = await client.get(url, headers=headers, timeout=20.0)
-            if res.status_code != 200: raise Exception("API Error")
-            
             data = res.json().get("response", [])
-            if not data: return {"top": [], "more": [], "other_sports": [], "sidebar_leagues": []}
+            if not data: return {"top": [], "more": [], "results": []}
 
             processed_leagues = {}
-            sidebar_list = []
+            results_list = []
             
             for item in data:
-                league = item['league']
-                l_id = league['id']
-                l_name = league['name']
-                l_country = league['country']
-                
+                l_id, l_name, l_country = item['league']['id'], item['league']['name'], item['league']['country']
                 l_key = f"{str(l_country).lower()}_{l_id}"
                 
                 if l_key not in processed_leagues:
-                    processed_leagues[l_key] = {
-                        "key": l_key, "name": l_name, "country": l_country,
-                        "logo": league.get('logo', ""), "matches": [], "sport_type": "soccer"
-                    }
-                    sidebar_list.append({"key": l_key, "name": f"{l_country}: {l_name}", "sport": "soccer"})
+                    processed_leagues[l_key] = {"key": l_key, "name": l_name, "country": l_country, "logo": item['league'].get('logo', ""), "matches": []}
                 
-                home = item['teams']['home']['name']
-                away = item['teams']['away']['name']
-                
-                match_time = item['fixture']['date'][11:16] 
-                status = item['fixture']['status']['short']
+                home, away = item['teams']['home']['name'], item['teams']['away']['name']
+                status, match_time = item['fixture']['status']['short'], item['fixture']['date'][11:16]
+                g_home, g_away = item['goals']['home'], item['goals']['away']
                 
                 tip, prob = premium_ai_engine(home, away, l_name)
                 
-                processed_leagues[l_key]["matches"].append({
-                    "id": str(item['fixture']['id']),
-                    "home": home, "away": away,
-                    "status": f"LEO {match_time}" if status == "NS" else status,
-                    "ai_tip": tip, "asilimia": prob,
-                    "odds": {"1": "2.10", "X": "3.40", "2": "3.80"} 
-                })
+                match_obj = {
+                    "id": str(item['fixture']['id']), "home": home, "away": away,
+                    "status": f"{item['fixture']['status']['elapsed']}'" if status in ["1H", "2H", "HT"] else status,
+                    "score": f"{g_home if g_home is not None else 0} - {g_away if g_away is not None else 0}",
+                    "time": match_time, "ai_tip": tip, "asilimia": prob,
+                    "result_status": ai_bet_settlement(tip, g_home, g_away, status),
+                    "is_finished": status in ["FT", "AET", "PEN"]
+                }
+                
+                processed_leagues[l_key]["matches"].append(match_obj)
+                if match_obj["is_finished"]: results_list.append({**match_obj, "leagueName": l_name})
 
-            # =======================================================
-            # 4. MPANGILIO WA KIBABE (SMART SORTING)
-            # =======================================================
-            top_countries = ['tanzania', 'england', 'spain', 'italy', 'germany', 'france', 'world']
-            
-            top_leagues = []
-            more_leagues = []
-            
-            # Gawanya kwanza
+            top_leagues, more_leagues = [], []
             for key, val in processed_leagues.items():
-                c = str(val['country']).lower()
-                n = str(val['name']).lower()
-                is_top = any(tc in c for tc in top_countries) or 'champions' in n or 'europa' in n
-                
-                if is_top: 
+                if any(tc in str(val['country']).lower() for tc in ['tanzania', 'england', 'spain', 'italy', 'germany', 'france', 'world']) or 'champions' in str(val['name']).lower():
                     top_leagues.append(val)
-                else: 
-                    more_leagues.append(val)
+                else: more_leagues.append(val)
 
-            # Panga Ligi Kubwa kulingana na Ukubwa Wao
-            def rank_league(league):
-                c = str(league['country']).lower()
-                n = str(league['name']).lower()
-                
-                if 'tanzania' in c: return 1
-                if 'england' in c and 'premier league' in n: return 2
-                if 'spain' in c and ('la liga' in n or 'primera' in n): return 3
-                if 'italy' in c and 'serie a' in n: return 4
-                if 'germany' in c and 'bundesliga' in n: return 5
-                if 'champions league' in n: return 6
-                if 'europa league' in n: return 7
-                if 'france' in c and 'ligue 1' in n: return 8
-                if 'england' in c: return 9  # Championship etc.
-                if 'spain' in c: return 10
-                if 'italy' in c: return 11
-                if 'germany' in c: return 12
-                if 'world' in c: return 13
-                return 99
-
-            top_leagues.sort(key=rank_league)
-            
-            # Panga ligi za kawaida kulingana na wingi wa mechi (Nyingi zikae juu)
+            top_leagues.sort(key=lambda l: 1 if 'tanzania' in str(l['country']).lower() else 2 if 'premier league' in str(l['name']).lower() else 10)
             more_leagues.sort(key=lambda x: len(x['matches']), reverse=True)
 
-            res_final = {
-                "top": top_leagues,
-                "more": more_leagues,
-                "other_sports": [], 
-                "sidebar_leagues": sidebar_list
-            }
+            res_final = {"top": top_leagues, "more": more_leagues, "results": sorted(results_list, key=lambda x: x["time"], reverse=True)}
 
-            # 5. Save Cache Mpya
             try:
                 conn = get_db_connection()
                 cursor = conn.cursor()
@@ -182,27 +142,93 @@ async def pata_mikeka():
             except: pass
             
             return res_final
-
-    except Exception as e:
-        print(f"Error: {e}")
-        return {"top": [], "more": [], "other_sports": [], "sidebar_leagues": []}
+    except Exception as e: return {"top": [], "more": [], "results": []}
 
 # ==========================================
-# AUTH & ADMIN ENDPOINTS
+# 4. MASTER ADMIN ENDPOINTS 🔥
 # ==========================================
+class SlipSchema(BaseModel): title: str; code: str; odds: str; bookmaker: str; status: str
+class UserSchema(BaseModel): name: str = None; phone: str; password: str
+
+@app.get("/api/admin/stats")
+def get_admin_stats():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM users")
+        total_users = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM admin_slips WHERE status='Active'")
+        active_slips = cursor.fetchone()[0]
+        conn.close()
+        return {"total_users": total_users, "active_slips": active_slips, "ai_accuracy": "84.5%"}
+    except: return {"total_users": 0, "active_slips": 0, "ai_accuracy": "84.5%"}
+
+@app.get("/api/admin/users")
+def get_all_users():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, phone, role, created_at FROM users ORDER BY id DESC LIMIT 50")
+        users = [{"id": r[0], "name": r[1], "phone": r[2], "role": r[3], "joined": r[4].strftime('%Y-%m-%d')} for r in cursor.fetchall()]
+        conn.close()
+        return users
+    except: return []
+
 @app.get("/api/admin/slips")
 def get_admin_slips():
-    return [{"id": 1, "title": "🔥 SLY VIP MEGA ACCA", "code": "SLY-89K2", "odds": "15.40", "bookmaker": "1xBet", "status": "Active"}]
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, title, code, odds, bookmaker, status FROM admin_slips ORDER BY id DESC")
+        slips = [{"id": r[0], "title": r[1], "code": r[2], "odds": r[3], "bookmaker": r[4], "status": r[5]} for r in cursor.fetchall()]
+        conn.close()
+        return slips
+    except: return []
 
-class ScanRequest(BaseModel): code: str
-@app.post("/api/scan-slip")
-def scan_slip(req: ScanRequest):
-    return {"status": "GOOD", "win_probability": "70%", "analysis": "MZURI", "scanned_code": req.code}
+@app.post("/api/admin/add_slip")
+def add_admin_slip(slip: SlipSchema):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO admin_slips (title, code, odds, bookmaker, status) VALUES (%s, %s, %s, %s, %s)", (slip.title, slip.code, slip.odds, slip.bookmaker, slip.status))
+        conn.commit()
+        conn.close()
+        return {"status": "success", "message": "Slip added successfully"}
+    except Exception as e: raise HTTPException(status_code=500, detail=str(e))
 
-class UserSchema(BaseModel): name: str = None; phone: str; password: str
+@app.delete("/api/admin/delete_slip/{slip_id}")
+def delete_slip(slip_id: int):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM admin_slips WHERE id = %s", (slip_id,))
+        conn.commit()
+        conn.close()
+        return {"status": "success"}
+    except: raise HTTPException(status_code=500, detail="Error")
+
 @app.post("/api/register")
-def register(user: UserSchema): return {"status": "success"}
+def register(user: UserSchema): 
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO users (name, phone, password) VALUES (%s, %s, %s)", (user.name, user.phone, user.password))
+        conn.commit()
+        conn.close()
+        return {"status": "success"}
+    except: raise HTTPException(status_code=400, detail="Phone already exists")
 
 @app.post("/api/login")
 def login(user: UserSchema): 
-    return {"status": "success", "user": {"id": 1, "name": "Admin", "phone": user.phone}}
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, phone, role FROM users WHERE phone=%s AND password=%s", (user.phone, user.password))
+        u = cursor.fetchone()
+        conn.close()
+        if u: return {"status": "success", "user": {"id": u[0], "name": u[1], "phone": u[2], "role": u[3]}}
+        raise HTTPException(status_code=401, detail="Invalid Credentials")
+    except: raise HTTPException(status_code=401, detail="Invalid Credentials")
+
+@app.post("/api/scan-slip")
+def scan_slip(req: BaseModel): return {"status": "GOOD", "win_probability": "85%", "analysis": "MZURI", "scanned_code": "CODE"}
