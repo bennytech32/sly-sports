@@ -24,6 +24,20 @@ const getSportIcon = (leagueName: string, defaultIcon?: string) => {
   return "⚽"; 
 };
 
+// ==========================================
+// COMBO SETTLEMENT TRACKER 
+// ==========================================
+const getComboStatus = (matches: any[]) => {
+    if (!matches || matches.length === 0) return { label: "PENDING ⏳", color: "text-[#facc15]", progress: 0 };
+    const total = matches.length;
+    const won = matches.filter((m: any) => m.result_status === "WON").length;
+    const lost = matches.filter((m: any) => m.result_status === "LOST").length;
+
+    if (lost > 0) return { label: "LOST ❌", color: "text-red-500", progress: won };
+    if (won === total && total > 0) return { label: "SUCCESS ✅", color: "text-green-500", progress: won };
+    return { label: `${won}/${total} WON ⏳`, color: "text-[#facc15]", progress: won };
+};
+
 export default function Dashboard() {
   const [dataYaLigi, setDataYaLigi] = useState<{top: any[], more: any[], results: any[]}>({top: [], more: [], results: []});
   const [adminSlips, setAdminSlips] = useState<any[]>([]);
@@ -62,7 +76,16 @@ export default function Dashboard() {
         const cacheBuster = new Date().getTime();
         const baseUrl = typeof window !== 'undefined' && window.location.hostname === "localhost" ? "http://127.0.0.1:8000" : "";
         
-        const resMatches = await fetch(`${baseUrl}/api/mikeka?t=${cacheBuster}`, { cache: "no-store" });
+        // Vuta Data Zote kwa pamoja
+        const [resMatches, resSlips] = await Promise.all([
+            fetch(`${baseUrl}/api/mikeka?t=${cacheBuster}`, { cache: "no-store" }),
+            fetch(`${baseUrl}/api/admin/slips`, { cache: "no-store" })
+        ]);
+        
+        if (resSlips.ok) {
+            setAdminSlips(await resSlips.json());
+        }
+
         if (resMatches.ok) {
           const rawData = await resMatches.json();
           if (rawData) {
@@ -191,7 +214,7 @@ export default function Dashboard() {
           
           for (let i = 0; i < allAvailableMatches.length; i++) {
               const m = allAvailableMatches[i];
-              if(m.result_status !== "PENDING") continue; 
+              if(m.result_status && m.result_status !== "PENDING") continue; 
               const aiOdd = parseFloat(((100 / parseInt(m.asilimia)) * 0.95).toFixed(2));
               
               if ((currentOdds * aiOdd) <= (target + 1.5)) { 
@@ -276,11 +299,11 @@ export default function Dashboard() {
             <button onClick={() => setActiveTab("dashboard")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-md font-bold text-sm transition border-l-4 ${activeTab === "dashboard" ? "bg-[#1e61d4]/10 text-[#5c98ff] border-[#1e61d4]" : "text-gray-400 hover:bg-[#162032] border-transparent"}`}>
               <span>📊</span> Live AI Picks
             </button>
-            <button onClick={() => setActiveTab("results")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-md font-bold text-sm transition border-l-4 ${activeTab === "results" ? "bg-green-500/10 text-green-500 border-green-500" : "text-gray-400 hover:bg-[#162032] border-transparent"}`}>
-              <span>✅</span> Match Results
-            </button>
             <button onClick={() => setActiveTab("admin")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-md font-bold text-sm transition border-l-4 ${activeTab === "admin" ? "bg-[#facc15]/10 text-[#facc15] border-[#facc15]" : "text-gray-400 hover:bg-[#162032] border-transparent"}`}>
               <span>👑</span> VIP Slips
+            </button>
+            <button onClick={() => setActiveTab("results")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-md font-bold text-sm transition border-l-4 ${activeTab === "results" ? "bg-green-500/10 text-green-500 border-green-500" : "text-gray-400 hover:bg-[#162032] border-transparent"}`}>
+              <span>✅</span> Match Results
             </button>
             <button onClick={() => setActiveTab("scanner")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-md font-bold text-sm transition border-l-4 ${activeTab === "scanner" ? "bg-purple-500/10 text-purple-400 border-purple-500" : "text-gray-400 hover:bg-[#162032] border-transparent"}`}>
               <span>🤖</span> AI Slip Scanner
@@ -292,6 +315,11 @@ export default function Dashboard() {
         </div>
 
         <div className="p-4 mt-auto">
+          {user.role === 'admin' && (
+            <Link href="/admin" className="flex items-center justify-center gap-2 w-full bg-[#1c2638] text-white px-4 py-3 rounded-md font-bold text-sm transition border border-[#26344d] hover:bg-[#26344d] mb-3">
+              <span>⚡</span> Switch to Master Admin
+            </Link>
+          )}
           <button onClick={handleLogout} className="flex items-center justify-center gap-2 w-full bg-[#162032] text-gray-400 hover:text-white px-4 py-3 rounded-md font-bold text-sm transition border border-[#26344d] hover:border-red-500 hover:bg-red-500/10">
             <span>🚪</span> Log Out
           </button>
@@ -324,6 +352,7 @@ export default function Dashboard() {
           </div>
         ) : (
           <>
+            {/* TAB 1: DASHBOARD */}
             {activeTab === "dashboard" && (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -392,6 +421,94 @@ export default function Dashboard() {
               </>
             )}
 
+            {/* TAB 2: VIP SLIPS (CLIENT SIDE) - KUNA MATOKEO YA COMBOS HAPA 🏆 */}
+            {activeTab === "admin" && (
+                <section className="max-w-5xl mx-auto">
+                    <div className="bg-gradient-to-r from-yellow-500/20 to-transparent border-l-4 border-[#facc15] p-4 rounded-r-lg mb-6">
+                        <h3 className="text-[#facc15] font-black uppercase text-sm">Premium AI Combos</h3>
+                        <p className="text-gray-300 text-xs mt-1">Daily fully-unlocked AI-generated Acca Combos with progress tracking.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                        {topCombos.map((combo, idx) => {
+                            const statusInfo = getComboStatus(combo.matches);
+                            return (
+                               <div key={idx} className="bg-[#0d1422] border border-[#1c2638] rounded-xl p-5 shadow-xl relative overflow-hidden group">
+                                  <div className="flex justify-between items-center mb-4 border-b border-[#1c2638] pb-3">
+                                     <div>
+                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest block mb-1">{combo.title}</span>
+                                        <div className="flex items-center gap-2">
+                                           <span className="text-2xl font-black text-[#facc15]">{combo.totalOdds} Odds</span>
+                                           <span className={`text-[10px] px-2 py-0.5 rounded font-black ${statusInfo.color} bg-opacity-10 border ${statusInfo.color.replace('text-', 'border-')}/30`}>
+                                               {statusInfo.label}
+                                           </span>
+                                        </div>
+                                     </div>
+                                     <button onClick={() => addComboToSlip(combo.matches)} className="bg-[#1e61d4] hover:bg-[#2563eb] text-white text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded shadow-lg transition">Load to Builder</button>
+                                  </div>
+                                  
+                                  <div className="space-y-2">
+                                     {combo.matches.map((m: any, i: number) => (
+                                        <div key={i} className="flex justify-between items-center text-sm bg-[#162032] p-2.5 rounded border border-[#26344d]">
+                                           <div className="flex-1">
+                                               <span className="text-white font-bold truncate max-w-[150px] block">{m.home} vs {m.away}</span>
+                                               <span className="text-[10px] text-gray-400 uppercase font-bold">Result: <span className="text-white">{m.score || "0-0"}</span></span>
+                                           </div>
+                                           <div className="text-right">
+                                               <span className={`font-black uppercase ${m.result_status === 'WON' ? 'text-green-500' : m.result_status === 'LOST' ? 'text-red-500' : 'text-[#facc15]'}`}>
+                                                   🤖 {m.ai_tip} {m.result_status === 'WON' ? '✅' : m.result_status === 'LOST' ? '❌' : ''}
+                                               </span>
+                                           </div>
+                                        </div>
+                                     ))}
+                                  </div>
+                                  
+                                  <div className="mt-4 pt-3 border-t border-[#1c2638]">
+                                      <div className="flex justify-between text-[10px] font-bold uppercase text-gray-500 mb-1">
+                                          <span>Progress</span>
+                                          <span>{statusInfo.progress} / {combo.matches.length} matches</span>
+                                      </div>
+                                      <div className="w-full bg-[#070b12] h-1.5 rounded-full overflow-hidden">
+                                          <div className={`h-full transition-all duration-700 ${statusInfo.color.replace('text-', 'bg-')}`} style={{ width: `${(statusInfo.progress / combo.matches.length) * 100}%` }}></div>
+                                      </div>
+                                  </div>
+                               </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="bg-gradient-to-r from-purple-500/20 to-transparent border-l-4 border-purple-500 p-4 rounded-r-lg mb-6 mt-10">
+                        <h3 className="text-purple-400 font-black uppercase text-sm">Expert Admin Tickets</h3>
+                        <p className="text-gray-300 text-xs mt-1">Ready-made booking codes from our expert analysts.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {adminSlips.length > 0 ? adminSlips.map((slip, i) => (
+                           <div key={i} className="bg-[#0d1422] border border-[#1c2638] hover:border-purple-500/50 transition duration-300 rounded-xl p-5 shadow-xl relative group">
+                               <div className="absolute top-4 right-4 bg-[#162032] text-purple-400 text-[10px] font-black px-2 py-1 rounded border border-[#26344d]">{slip.bookmaker}</div>
+                               <h3 className="text-white font-black text-lg uppercase mb-2 pr-16">{slip.title}</h3>
+                               
+                               <div className="flex gap-6 mt-4 mb-5 pb-5 border-b border-[#1c2638]">
+                                  <div><p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Total Odds</p><p className="text-3xl font-black text-purple-400">{slip.odds}</p></div>
+                                  <div><p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Status</p><p className="text-sm font-black text-green-500 mt-2 flex items-center gap-1"><span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> {slip.status}</p></div>
+                               </div>
+                               
+                               <div>
+                                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2">Booking Code</p>
+                                  <div className="flex gap-2">
+                                      <div className="bg-[#070b12] border border-[#26344d] text-white font-black px-4 py-3 rounded-lg flex-1 text-center tracking-widest text-lg">{slip.code}</div>
+                                      <button onClick={() => showToast(`Code ${slip.code} Copied!`)} className="bg-purple-600 hover:bg-purple-700 text-white px-4 rounded-lg font-bold transition shadow-lg">Copy</button>
+                                  </div>
+                               </div>
+                           </div>
+                        )) : (
+                           <div className="col-span-2 text-center py-20 bg-[#0d1422] border border-[#1c2638] rounded-xl"><p className="text-gray-500 font-bold">No Admin slips available today. Check back later.</p></div>
+                        )}
+                    </div>
+                </section>
+            )}
+
+            {/* TAB 3: RESULTS */}
             {activeTab === "results" && (
                 <section className="max-w-4xl mx-auto">
                     <div className="bg-gradient-to-r from-green-500/20 to-transparent border-l-4 border-green-500 p-4 rounded-r-lg mb-6">
@@ -430,70 +547,7 @@ export default function Dashboard() {
                 </section>
             )}
 
-            {activeTab === "admin" && (
-                <section className="max-w-5xl">
-                    <div className="bg-gradient-to-r from-yellow-500/20 to-transparent border-l-4 border-[#facc15] p-4 rounded-r-lg mb-6">
-                        <h3 className="text-[#facc15] font-black uppercase text-sm">Premium Acca Combos (Unlocked)</h3>
-                        <p className="text-gray-300 text-xs mt-1">Here are your fully unlocked AI-generated Acca Combos for today.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-                        {topCombos.map((combo, idx) => (
-                           <div key={idx} className="bg-[#0d1422] border border-[#1c2638] rounded-xl p-5 shadow-xl relative overflow-hidden group">
-                              <div className="flex justify-between items-center mb-4 border-b border-[#1c2638] pb-3">
-                                 <div>
-                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest block mb-1">{combo.title}</span>
-                                    <div className="flex items-center gap-2">
-                                       <span className="text-2xl font-black text-[#facc15]">{combo.totalOdds} Odds</span>
-                                       <span className={`text-[10px] px-2 py-0.5 rounded font-black ${combo.prob > 60 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>{combo.prob}% SURE</span>
-                                    </div>
-                                 </div>
-                                 <button onClick={() => addComboToSlip(combo.matches)} className="bg-[#1e61d4] hover:bg-[#2563eb] text-white text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded shadow-lg">Load to Builder</button>
-                              </div>
-                              
-                              <div className="space-y-2">
-                                 {combo.matches.map((m: any, i: number) => (
-                                    <div key={i} className="flex justify-between items-center text-sm bg-[#162032] p-2 rounded">
-                                       <span className="text-white font-bold truncate max-w-[180px]">{m.home} vs {m.away}</span>
-                                       <span className="text-[#facc15] font-black uppercase">🤖 {m.ai_tip}</span>
-                                    </div>
-                                 ))}
-                              </div>
-                           </div>
-                        ))}
-                    </div>
-
-                    <div className="bg-gradient-to-r from-purple-500/20 to-transparent border-l-4 border-purple-500 p-4 rounded-r-lg mb-6 mt-10">
-                        <h3 className="text-purple-400 font-black uppercase text-sm">Expert Admin Tickets</h3>
-                        <p className="text-gray-300 text-xs mt-1">Ready-made booking codes from 1xBet, Betway, etc.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {adminSlips.length > 0 ? adminSlips.map((slip, i) => (
-                           <div key={i} className="bg-[#0d1422] border border-[#1c2638] hover:border-purple-500/50 transition duration-300 rounded-xl p-5 shadow-xl relative group">
-                               <div className="absolute top-4 right-4 bg-[#162032] text-purple-400 text-[10px] font-black px-2 py-1 rounded border border-[#26344d]">{slip.bookmaker}</div>
-                               <h3 className="text-white font-black text-lg uppercase mb-2 pr-16">{slip.title}</h3>
-                               
-                               <div className="flex gap-6 mt-4 mb-5 pb-5 border-b border-[#1c2638]">
-                                  <div><p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Total Odds</p><p className="text-3xl font-black text-purple-400">{slip.odds}</p></div>
-                                  <div><p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Status</p><p className="text-sm font-black text-green-500 mt-2 flex items-center gap-1"><span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> {slip.status}</p></div>
-                               </div>
-                               
-                               <div>
-                                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2">Booking Code</p>
-                                  <div className="flex gap-2">
-                                      <div className="bg-[#070b12] border border-[#26344d] text-white font-black px-4 py-3 rounded-lg flex-1 text-center tracking-widest text-lg">{slip.code}</div>
-                                      <button onClick={() => showToast(`Code ${slip.code} Copied!`)} className="bg-purple-600 hover:bg-purple-700 text-white px-4 rounded-lg font-bold transition shadow-lg">Copy</button>
-                                  </div>
-                               </div>
-                           </div>
-                        )) : (
-                           <div className="col-span-2 text-center py-20 bg-[#0d1422] border border-[#1c2638] rounded-xl"><p className="text-gray-500 font-bold">No Admin slips available today. Check back later.</p></div>
-                        )}
-                    </div>
-                </section>
-            )}
-
+            {/* TAB 4: AI SCANNER */}
             {activeTab === "scanner" && (
                 <section className="max-w-2xl mx-auto">
                     <div className="bg-[#0d1422] rounded-xl border border-[#1c2638] p-6 md:p-8 shadow-2xl relative overflow-hidden">
@@ -558,6 +612,7 @@ export default function Dashboard() {
                 </section>
             )}
 
+            {/* TAB 5: BUILDER */}
             {activeTab === "builder" && (
                 <section className="max-w-4xl mx-auto pb-10 grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-1">
@@ -650,6 +705,13 @@ export default function Dashboard() {
           </div>
         )}
       </main>
+      
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar { height: 4px; width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #0d1422; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1c2638; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #1e61d4; }
+      `}</style>
     </div>
   );
 }

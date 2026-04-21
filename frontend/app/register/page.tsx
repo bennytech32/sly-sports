@@ -1,97 +1,191 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-export default function Register() {
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
+export default function RegisterPage() {
+  const [lang, setLang] = useState<"en" | "sw">("en");
+  const [formData, setFormData] = useState({ name: '', phone: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+
+  const t = {
+    en: {
+      welcome: "Create Free Account",
+      subtitle: "Join SlyTips to unlock AI Predictions and VIP Slips.",
+      fullName: "Full Name",
+      phoneOrEmail: "Phone Number or Email",
+      password: "Create Password",
+      registerBtn: "Create Account",
+      loading: "Registering...",
+      hasAccount: "Already have an account?",
+      login: "Login Here",
+      backHome: "Back to Home",
+      success: "Registration Successful! Please login."
+    },
+    sw: {
+      welcome: "Tengeneza Akaunti",
+      subtitle: "Jiunge na SlyTips kupata Utabiri wa AI na Mikeka ya VIP.",
+      fullName: "Jina Kamili",
+      phoneOrEmail: "Namba ya Simu au Email",
+      password: "Tengeneza Password",
+      registerBtn: "Kamilisha Usajili",
+      loading: "Inasajili...",
+      hasAccount: "Tayari una akaunti?",
+      login: "Ingia Hapa",
+      backHome: "Rudi Mwanzo",
+      success: "Usajili umekamilika! Tafadhali Ingia (Login)."
+    }
+  }[lang];
+
+  useEffect(() => {
+    const userData = localStorage.getItem("slyUser");
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        if (user.role === 'admin') window.location.href = "/admin";
+        else window.location.href = "/dashboard";
+      } catch (e) { localStorage.removeItem("slyUser"); }
+    }
+  }, []);
+
+  const showToast = (message: string) => {
+    setToastMsg(message);
+    setTimeout(() => setToastMsg(""), 4000);
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError("");
 
     try {
-      // SMART URL: Inatambua kama upo Localhost inaenda Port 8000, ukiwa Vercel inasoma kawaida
-      const baseUrl = typeof window !== 'undefined' && window.location.hostname === "localhost" ? "http://127.0.0.1:8000" : "";
-      
-      const res = await fetch(`${baseUrl}/api/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone, password })
-      });
+        const res = await fetch(`/api/register`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(formData)
+        });
 
-      if (res.ok) {
-        setSuccess(true);
-        setTimeout(() => {
-          window.location.href = "/login"; // Inakupeleka Login ukifanikiwa
-        }, 2000);
-      } else {
-        const data = await res.json();
-        setError(data.detail || "Imeshindwa kusajili, namba hii huenda ipo tayari.");
-      }
-    } catch (err) {
-      setError("Imeshindwa kuunganisha na Server. Tafadhali jaribu tena.");
-    } finally {
-      setIsLoading(false);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.status === "success") {
+                showToast(`✅ ${t.success}`);
+                setTimeout(() => { window.location.href = "/login"; }, 1500);
+            } else {
+                showToast(data.detail || "Registration failed.");
+                setIsLoading(false);
+            }
+        } else {
+            let errorDetail = "Registration failed or Phone already exists.";
+            try {
+                const errorData = await res.json();
+                if(errorData.detail) errorDetail = errorData.detail;
+            } catch(e) {}
+            showToast(`❌ Error: ${errorDetail}`);
+            setIsLoading(false);
+        }
+    } catch (error: any) {
+        console.error("Register Fetch Error:", error);
+        showToast(`🔌 Network Error: Please check your connection.`);
+        setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#070b12] flex items-center justify-center p-4">
-      <div className="bg-[#0d1422] border border-[#1c2638] rounded-2xl shadow-2xl p-8 max-w-md w-full">
-        
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-block mb-4">
-             <div className="w-12 h-12 bg-[#facc15] rounded flex items-center justify-center shadow-[0_0_15px_rgba(250,204,21,0.5)] mx-auto">
-                <span className="text-[#070b12] font-bold text-3xl">S</span>
-             </div>
-          </Link>
-          <h1 className="text-2xl font-black text-white uppercase tracking-wider">Create Account</h1>
-          <p className="text-sm text-gray-400 mt-2">Join thousands of winners today. It's free!</p>
+    <main className="min-h-screen bg-[#070b12] text-gray-200 font-sans selection:bg-[#facc15] selection:text-black flex flex-col relative overflow-hidden">
+      
+      <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-[#1e61d4]/10 to-transparent pointer-events-none"></div>
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#facc15]/5 rounded-full blur-[120px] pointer-events-none"></div>
+
+      {toastMsg && (
+        <div className="fixed top-10 left-1/2 -translate-x-1/2 bg-[#1e61d4] text-white px-6 py-3 rounded-md shadow-[0_10px_40px_rgba(30,97,212,0.6)] z-[100] font-black animate-bounce flex items-center gap-2">
+           {toastMsg}
         </div>
+      )}
 
-        {error && <div className="bg-red-500/10 border border-red-500/50 text-red-500 text-sm p-3 rounded text-center mb-6 font-bold">{error}</div>}
-        {success && <div className="bg-green-500/10 border border-green-500/50 text-green-500 text-sm p-3 rounded text-center mb-6 font-bold">✅ Usajili umekamilika! Tunakupeleka Login...</div>}
-
-        <form onSubmit={handleRegister} className="space-y-5">
-          <div>
-            <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Full Name</label>
-            <div className="relative">
-              <span className="absolute left-3 top-3 text-gray-500">👤</span>
-              <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-[#162032] border border-[#26344d] text-white rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:border-[#1e61d4] transition" placeholder="John Doe" />
+      <header className="p-6 md:p-8 flex justify-between items-center relative z-10 max-w-7xl mx-auto w-full">
+        <Link href="/" className="flex items-center gap-2 cursor-pointer">
+            <div className="w-10 h-10 bg-[#facc15] rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(250,204,21,0.5)]">
+                <span className="text-[#070b12] font-black text-2xl">S</span>
             </div>
+            <span className="text-2xl font-black text-white tracking-wider">SLY<span className="text-[#facc15]">TIPS</span></span>
+        </Link>
+        <div className="flex items-center gap-4">
+            <button onClick={() => setLang(lang === 'en' ? 'sw' : 'en')} className="bg-[#1c2638] text-white px-3 py-1.5 rounded text-xs font-bold uppercase hover:bg-[#26344d] transition border border-[#26344d]">
+                {lang === 'en' ? '🇹🇿 SW' : '🇬🇧 EN'}
+            </button>
+            <Link href="/" className="text-gray-400 hover:text-white font-bold text-sm hidden sm:block transition">
+                {t.backHome}
+            </Link>
+        </div>
+      </header>
+
+      <div className="flex-1 flex items-center justify-center p-4 relative z-10">
+          <div className="w-full max-w-md bg-[#0d1422]/80 backdrop-blur-md border border-[#1c2638] p-8 md:p-10 rounded-2xl shadow-2xl">
+              
+              <div className="text-center mb-8">
+                  <h1 className="text-3xl font-black text-white uppercase tracking-wider mb-2">{t.welcome}</h1>
+                  <p className="text-gray-400 text-sm">{t.subtitle}</p>
+              </div>
+
+              <form onSubmit={handleRegister} className="space-y-5">
+                  <div>
+                      <label className="block text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2">{t.fullName}</label>
+                      <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">📝</span>
+                          <input 
+                              type="text" required
+                              value={formData.name}
+                              onChange={(e) => setFormData({...formData, name: e.target.value})}
+                              className="w-full bg-[#162032] border border-[#26344d] text-white font-bold rounded-lg pl-12 pr-4 py-4 focus:outline-none focus:border-[#1e61d4] transition"
+                              placeholder="e.g. John Doe"
+                          />
+                      </div>
+                  </div>
+
+                  <div>
+                      <label className="block text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2">{t.phoneOrEmail}</label>
+                      <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">👤</span>
+                          <input 
+                              type="text" required
+                              value={formData.phone}
+                              onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                              className="w-full bg-[#162032] border border-[#26344d] text-white font-bold rounded-lg pl-12 pr-4 py-4 focus:outline-none focus:border-[#1e61d4] transition"
+                              placeholder="e.g. 0712345678"
+                          />
+                      </div>
+                  </div>
+
+                  <div>
+                      <label className="block text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2">{t.password}</label>
+                      <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">🔒</span>
+                          <input 
+                              type="password" required
+                              value={formData.password}
+                              onChange={(e) => setFormData({...formData, password: e.target.value})}
+                              className="w-full bg-[#162032] border border-[#26344d] text-white font-bold rounded-lg pl-12 pr-4 py-4 focus:outline-none focus:border-[#1e61d4] transition"
+                              placeholder="••••••••"
+                          />
+                      </div>
+                  </div>
+
+                  <button 
+                      type="submit" 
+                      disabled={isLoading}
+                      className="w-full bg-gradient-to-r from-[#1e61d4] to-[#2563eb] text-white font-black py-4 rounded-lg text-sm uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-[1.02] transition transform disabled:opacity-50 mt-4"
+                  >
+                      {isLoading ? t.loading : t.registerBtn}
+                  </button>
+              </form>
+
+              <div className="mt-8 text-center border-t border-[#1c2638] pt-6">
+                  <p className="text-gray-400 text-sm">
+                      {t.hasAccount} <Link href="/login" className="text-[#facc15] font-black hover:underline ml-1">{t.login}</Link>
+                  </p>
+              </div>
+
           </div>
-
-          <div>
-            <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Phone Number</label>
-            <div className="relative">
-              <span className="absolute left-3 top-3 text-gray-500">📱</span>
-              <input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full bg-[#162032] border border-[#26344d] text-white rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:border-[#facc15] transition" placeholder="0712345678" />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Password</label>
-            <div className="relative">
-              <span className="absolute left-3 top-3 text-gray-500">🔒</span>
-              <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-[#162032] border border-[#26344d] text-white rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:border-[#1e61d4] transition" placeholder="••••••" />
-            </div>
-          </div>
-
-          <button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-[#facc15] to-yellow-600 text-[#070b12] font-black py-4 rounded-lg uppercase tracking-widest text-sm hover:scale-[1.02] transition shadow-[0_5px_15px_rgba(250,204,21,0.3)] disabled:opacity-50">
-            {isLoading ? "Creating..." : "Create VIP Account"}
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-gray-400 mt-6">
-          Already have an account? <Link href="/login" className="text-[#5c98ff] font-bold hover:underline">Log in here</Link>
-        </p>
       </div>
-    </div>
+    </main>
   );
 }

@@ -18,7 +18,9 @@ const translations = {
     aiPrediction: "AI Prediction",
     scanningPicks: "Scanning for top picks...",
     joinWhatsApp: "Join VIP WhatsApp Group",
+    joinInstagram: "Follow Us on Instagram",
     freeCodes: "Free Codes & Updates",
+    dailyTips: "Daily Tips & Slips",
     liveHighlights: "Live Highlights",
     searchPlaceholder: "Search team or league...",
     loadingOdds: "Loading Live Odds...",
@@ -54,7 +56,9 @@ const translations = {
     aiPrediction: "Utabiri wa AI",
     scanningPicks: "Inatafuta mechi bora...",
     joinWhatsApp: "Jiunge na WhatsApp Channel",
+    joinInstagram: "Tufuatilie Instagram",
     freeCodes: "Pata Code Bure Kila Siku",
+    dailyTips: "Uchambuzi wa Kila Siku",
     liveHighlights: "Mechi Zinazoendelea",
     searchPlaceholder: "Tafuta timu au ligi...",
     loadingOdds: "Inapakua Odds...",
@@ -159,7 +163,8 @@ export default function Home() {
     const fetchData = async () => {
       try {
         const cacheBuster = new Date().getTime();
-        const res = await fetch(`/api/mikeka?t=${cacheBuster}`, { cache: "no-store" }); 
+        const baseUrl = typeof window !== 'undefined' && window.location.hostname === "localhost" ? "http://127.0.0.1:8000" : "";
+        const res = await fetch(`${baseUrl}/api/mikeka?t=${cacheBuster}`, { cache: "no-store" }); 
         
         if (res.ok) {
           let rawData = await res.json();
@@ -233,14 +238,12 @@ export default function Home() {
     showToast(lang === 'en' ? "Logged out successfully" : "Umetoka kikamilifu");
   };
 
-  // Landing Page Generator Mock (Inawazuia mpaka waLogin)
   const handleLandingPageGenerate = () => {
       if(!targetOdds || isNaN(parseFloat(targetOdds))) return showToast("Enter a valid number for Odds");
       setIsGenerating(true);
       
       setTimeout(() => {
           setIsGenerating(false);
-          // Badala ya kutengeneza slip, inawatupa kwenye Login/Register
           window.location.href = "/login";
       }, 1500);
   };
@@ -311,7 +314,7 @@ export default function Home() {
             <div className="w-8 h-8 bg-[#facc15] rounded flex items-center justify-center shadow-[0_0_10px_rgba(250,204,21,0.5)]">
                 <span className="text-[#070b12] font-bold text-xl">S</span>
             </div>
-            <span className="hidden xl:block text-xl font-black text-white tracking-wider">SLY<span className="text-[#facc15]">TIPS</span></span>
+            <span className="hidden xl:block text-xl font-black text-white tracking-wider">SLY<span className="text-[#facc15]">SPORTS</span></span>
           </Link>
           
           <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-sm font-bold text-gray-400 uppercase tracking-wider flex-1 justify-center">
@@ -431,25 +434,48 @@ export default function Home() {
             </div>
           </div>
 
-          <a href="https://whatsapp.com/channel/0029VbCbNM23gvWVS8NV8g3F" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-[#25D366] to-[#1DA851] text-white p-4 rounded-xl flex items-center justify-between shadow-[0_4px_15px_rgba(37,211,102,0.3)] hover:scale-105 transition-transform mt-5 group border border-[#25D366]/50 block">
-             <div className="flex items-center gap-3">
-                <span className="text-3xl animate-bounce">💬</span>
-                <div>
-                   <h4 className="font-black text-[11px] uppercase leading-tight group-hover:text-yellow-200 transition-colors">{t.joinWhatsApp}</h4>
-                   <p className="text-[9px] text-white/90 font-bold uppercase mt-1 tracking-wider">{t.freeCodes}</p>
+          {/* SOCIAL MEDIA & PARTNER BUTTONS */}
+          <div className="space-y-4 mt-5">
+             <a href="https://whatsapp.com/channel/0029VbCbNM23gvWVS8NV8g3F" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-[#25D366] to-[#1DA851] text-white p-4 rounded-xl flex items-center justify-between shadow-[0_4px_15px_rgba(37,211,102,0.3)] hover:scale-105 transition-transform group border border-[#25D366]/50 block">
+                <div className="flex items-center gap-3">
+                   <span className="text-3xl animate-bounce">💬</span>
+                   <div>
+                      <h4 className="font-black text-[11px] uppercase leading-tight group-hover:text-yellow-200 transition-colors">{t.joinWhatsApp}</h4>
+                      <p className="text-[9px] text-white/90 font-bold uppercase mt-1 tracking-wider">{t.freeCodes}</p>
+                   </div>
                 </div>
-             </div>
-             <span className="text-xl font-bold">➔</span>
-          </a>
+                <span className="text-xl font-bold">➔</span>
+             </a>
+
+             <a href="https://www.instagram.com/sly_sports_tips?igsh=ajNycHpobnNqNGl2" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F56040] text-white p-4 rounded-xl flex items-center justify-between shadow-[0_4px_15px_rgba(225,48,108,0.3)] hover:scale-105 transition-transform group border border-[#FD1D1D]/50 block">
+                <div className="flex items-center gap-3">
+                   <span className="text-3xl">📸</span>
+                   <div>
+                      <h4 className="font-black text-[11px] uppercase leading-tight group-hover:text-yellow-200 transition-colors">{t.joinInstagram}</h4>
+                      <p className="text-[9px] text-white/90 font-bold uppercase mt-1 tracking-wider">{t.dailyTips}</p>
+                   </div>
+                </div>
+                <span className="text-xl font-bold">➔</span>
+             </a>
+
+             <a href="https://lckypr.com/Slysports" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-[#facc15] to-[#d4af37] text-[#070b12] p-4 rounded-xl flex items-center justify-between shadow-[0_4px_15px_rgba(250,204,21,0.3)] hover:scale-105 transition-transform group border border-[#facc15]/50 block">
+                <div className="flex items-center gap-3">
+                   <span className="text-3xl animate-pulse">🎁</span>
+                   <div>
+                      <h4 className="font-black text-[11px] uppercase leading-tight group-hover:text-white transition-colors">Get 130% Bonus</h4>
+                      <p className="text-[9px] font-black uppercase mt-1 tracking-wider opacity-80">CODE: SLYSPORTS</p>
+                   </div>
+                </div>
+                <span className="text-xl font-bold">➔</span>
+             </a>
+          </div>
 
         </aside>
 
         {/* MATCH LIST (KULIA) */}
         <div className="col-span-1 xl:col-span-3">
           
-          {/* ========================================================= */}
           {/* TOP ACCA COMBOS (LOCKED ON LANDING PAGE) */}
-          {/* ========================================================= */}
           {!isLoading && topCombos.length > 0 && (
             <div className="mb-10">
               <div className="flex items-center gap-2 mb-4 border-l-4 border-purple-500 pl-3">
@@ -668,7 +694,6 @@ function MatchRow({ mkeka, ligi, betslip, toggleBetslip, isLoggedIn, langText }:
 
   const isSoccer = !ligi.name.toLowerCase().includes("basket") && !ligi.name.toLowerCase().includes("tennis");
 
-  // MASOKO HORIZONTAL KWA SIMU
   const standardOptions = isSoccer ? [
       { group: "1X2", options: [{ label: "1", odd: aiTarget === "1" ? aiImpliedOdd : (deterministicRandom(1) * 2 + 1.5).toFixed(2) }, { label: "X", odd: aiTarget === "X" ? aiImpliedOdd : (deterministicRandom(2) * 1.5 + 2.8).toFixed(2) }, { label: "2", odd: aiTarget === "2" ? aiImpliedOdd : (deterministicRandom(3) * 2 + 2.5).toFixed(2) }]},
       { group: "DC", options: [{ label: "1X", odd: aiTarget === "1X" ? aiImpliedOdd : (deterministicRandom(4) * 0.5 + 1.1).toFixed(2) }, { label: "12", odd: aiTarget === "12" ? aiImpliedOdd : (deterministicRandom(5) * 0.3 + 1.2).toFixed(2) }, { label: "X2", odd: aiTarget === "X2" ? aiImpliedOdd : (deterministicRandom(6) * 0.8 + 1.3).toFixed(2) }]},
@@ -700,7 +725,6 @@ function MatchRow({ mkeka, ligi, betslip, toggleBetslip, isLoggedIn, langText }:
          </div>
       </div>
 
-      {/* OVERFLOW-X KWA AJILI YA SIMU (HORIZONTAL SCROLLING YA MARKETS) */}
       <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2">
          {standardOptions.map(group => (
             <div key={group.group} className="flex flex-col bg-[#090d16] p-1.5 rounded border border-[#1c2638] min-w-[120px] md:min-w-0 md:flex-1">
