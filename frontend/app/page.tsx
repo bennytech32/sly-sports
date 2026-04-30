@@ -37,12 +37,15 @@ const translations = {
     remove: "REMOVE",
     addSlip: "+ SLIP",
     totalOdds: "Total Odds",
-    signInBet: "Sign In & Bet",
+    signInBet: "Select Bookmaker To Bet",
     loginSave: "Login to Save Slip",
     betslip: "Betslip",
     disclaimer: "Sly Sports Tips provides expert sports predictions and AI analysis.",
     disclaimerWarn: "We are not a betting company. We do not accept deposits or handle bets. We only provide expert predictions.",
-    disclaimerAge: "Must be 18+ to use our services. Please play responsibly."
+    disclaimerAge: "18+ Must be 18 years or older to use our services. Please play responsibly.",
+    chatHello: "Hello! How can we help you today with our AI Predictions?",
+    usefulLinks: "Useful Links",
+    quickLinks: "Quick Links"
   },
   sw: {
     sports: "Michezo", aviator: "Aviator", casino: "Kasino", contact: "Wasiliana Nasi",
@@ -75,12 +78,15 @@ const translations = {
     remove: "ONDOA",
     addSlip: "+ WEKA",
     totalOdds: "Jumla ya Odds",
-    signInBet: "Ingia & Beti",
+    signInBet: "Chagua Kampuni Ya Kubeti",
     loginSave: "Ingia Kuhifadhi Mkeka",
     betslip: "Mkeka Wako",
     disclaimer: "Sly Sports Tips inatoa uchambuzi wa kitaalamu na utabiri wa AI.",
     disclaimerWarn: "Sisi hatuusiki na uchezeshaji wa kamari, tunatoa utabiri tu. Tofauti na kampuni za kubeti, sisi haturuhusu kuweka pesa.",
-    disclaimerAge: "Lazima uwe na miaka 18+ kutumia huduma zetu. Cheza kistaarabu."
+    disclaimerAge: "18+ Lazima uwe na miaka 18 au zaidi kutumia huduma zetu. Cheza kistaarabu.",
+    chatHello: "Jambo! Tukusaidie vipi leo kuhusu Mikeka na Utabiri wetu?",
+    usefulLinks: "Viungo Muhimu",
+    quickLinks: "Kurasa Zetu"
   }
 };
 
@@ -95,7 +101,6 @@ const FALLBACK_LEAGUES = [
 const getSportIcon = (leagueName: string, defaultIcon?: string) => {
   if (defaultIcon) return defaultIcon;
   if (!leagueName) return "⚽";
-  
   const name = leagueName.toLowerCase();
   if (name.includes("basket") || name.includes("nba")) return "🏀";
   if (name.includes("tennis") || name.includes("wta") || name.includes("atp")) return "🎾";
@@ -109,6 +114,22 @@ const getSportIcon = (leagueName: string, defaultIcon?: string) => {
   if (name.includes("ping") || name.includes("pong")) return "🏓";
   return "⚽"; 
 };
+
+// ==========================================
+// PARALLAX BACKGROUND ELEMENTS 🎲
+// ==========================================
+const PARALLAX_ITEMS = [
+  { id: 1, icon: "⚽", left: "5%", top: "2%", speed: 0.3, size: "text-9xl" },
+  { id: 2, icon: "🎰", left: "80%", top: "8%", speed: 0.15, size: "text-8xl" },
+  { id: 3, icon: "💸", left: "12%", top: "18%", speed: 0.4, size: "text-[10rem]" },
+  { id: 4, icon: "🃏", left: "75%", top: "28%", speed: 0.25, size: "text-7xl" },
+  { id: 5, icon: "🎲", left: "8%", top: "40%", speed: 0.5, size: "text-9xl" },
+  { id: 6, icon: "🏆", left: "85%", top: "50%", speed: 0.2, size: "text-8xl" },
+  { id: 7, icon: "🎯", left: "15%", top: "65%", speed: 0.35, size: "text-[12rem]" },
+  { id: 8, icon: "⚽", left: "78%", top: "75%", speed: 0.1, size: "text-7xl" },
+  { id: 9, icon: "🎰", left: "5%", top: "85%", speed: 0.45, size: "text-9xl" },
+  { id: 10, icon: "💸", left: "82%", top: "95%", speed: 0.25, size: "text-8xl" },
+];
 
 export default function Home() {
   const [dataYaLigi, setDataYaLigi] = useState<{top: any[], more: any[], sidebar_leagues: any[]}>({top: [], more: [], sidebar_leagues: []});
@@ -124,11 +145,22 @@ export default function Home() {
   const [betslip, setBetslip] = useState<any[]>([]);
   const [isSlipOpen, setIsSlipOpen] = useState(false);
 
+  // Mobile Toggles
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Live Chat States
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatMsgs, setChatMsgs] = useState<{sender: string, text: string}[]>([]);
+
+  // Parallax Scroll State
+  const [scrollY, setScrollY] = useState(0);
+
   const [currentSlide, setCurrentSlide] = useState(0);
   const [betOfTheDay, setBetOfTheDay] = useState<any>(null);
   const [topCombos, setTopCombos] = useState<any[]>([]);
 
-  // AI Generator States (Landing Page Version)
   const [targetOdds, setTargetOdds] = useState<string>("5");
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -153,7 +185,17 @@ export default function Home() {
     }
   ];
 
+  const t = translations[lang]; 
+
   useEffect(() => {
+    setChatMsgs([{ sender: 'bot', text: t.chatHello }]);
+  }, [lang, t.chatHello]);
+
+  useEffect(() => {
+    // Parallax Scroll Listener
+    const handleScroll = () => setScrollY(window.scrollY);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    
     const userData = localStorage.getItem("slyUser");
     if (userData) {
       setUser(JSON.parse(userData));
@@ -189,7 +231,6 @@ export default function Home() {
               
               if (allMatches.length >= 13) {
                   const combosArr = [];
-                  
                   const safeChunk = allMatches.slice(0, 2);
                   let safeOdds = 1;
                   safeChunk.forEach((m: any) => safeOdds *= ((100 / parseInt(m.asilimia)) * 0.95));
@@ -222,7 +263,11 @@ export default function Home() {
     const slideInterval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
     }, 5000);
-    return () => clearInterval(slideInterval);
+
+    return () => {
+      clearInterval(slideInterval);
+      window.removeEventListener("scroll", handleScroll);
+    };
   }, [heroSlides.length]);
 
   const showToast = (message: string) => {
@@ -241,11 +286,22 @@ export default function Home() {
   const handleLandingPageGenerate = () => {
       if(!targetOdds || isNaN(parseFloat(targetOdds))) return showToast("Enter a valid number for Odds");
       setIsGenerating(true);
-      
       setTimeout(() => {
           setIsGenerating(false);
           window.location.href = "/login";
       }, 1500);
+  };
+
+  const handleSendChat = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+    const userMsg = { sender: 'user', text: chatInput };
+    setChatMsgs([...chatMsgs, userMsg]);
+    setChatInput("");
+
+    setTimeout(() => {
+        setChatMsgs(prev => [...prev, { sender: 'bot', text: lang === 'en' ? "Thanks for reaching out! A support agent will connect with you shortly. For immediate help, click our WhatsApp link." : "Asante kwa ujumbe wako. Wakala wetu atawasiliana nawe hivi punde. Kwa msaada wa haraka zaidi, tumia link yetu ya WhatsApp." }]);
+    }, 1000);
   };
 
   const toggleBetslip = (match: any, userPick: string, userOdd: string) => {
@@ -278,7 +334,6 @@ export default function Home() {
   };
 
   const slipProb = parseFloat(calculateSlipProbability() as string);
-  const t = translations[lang]; 
   
   const activeSidebarLeagues = dataYaLigi.sidebar_leagues?.length > 0 ? dataYaLigi.sidebar_leagues : FALLBACK_LEAGUES;
   const allLeagues = [...dataYaLigi.top, ...dataYaLigi.more];
@@ -299,23 +354,44 @@ export default function Home() {
   const isSearching = searchQuery.trim().length > 0 || selectedLeague !== "ALL";
 
   return (
-    <main className="min-h-screen bg-[#070b12] text-gray-200 font-sans selection:bg-[#facc15] selection:text-black pb-20 md:pb-0 relative">
+    <main className="min-h-screen text-gray-200 font-sans selection:bg-[#facc15] selection:text-black pb-20 md:pb-0 relative">
       
+      {/* ========================================== */}
+      {/* STADIUM BACKGROUND W/ OVERLAY */}
+      {/* ========================================== */}
+      <div className="fixed inset-0 z-[0] bg-[#070b12]">
+        <div 
+          className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center opacity-55"
+          style={{
+             transform: `translateY(${scrollY * 0.15}px)`,
+             transition: 'transform 0.1s ease-out'
+          }}
+        ></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-[#070b12]/30 via-[#070b12]/80 to-[#070b12]"></div>
+      </div>
+
       {toastMsg && (
         <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-[#1e61d4] text-white px-6 py-3 rounded-md shadow-[0_10px_40px_rgba(30,97,212,0.6)] z-[100] flex items-center gap-3 font-bold text-sm animate-bounce">
           <span className="text-lg">✅</span> {toastMsg}
         </div>
       )}
 
-      {/* HEADER */}
-      <header className="bg-[#0d1422] border-b border-[#1c2638] sticky top-0 z-50 shadow-lg">
-        <div className="flex items-center justify-between px-4 md:px-8 py-3 gap-4 max-w-[1500px] mx-auto">
-          <Link href="/" className="flex items-center gap-2 flex-shrink-0 cursor-pointer">
-            <div className="w-8 h-8 bg-[#facc15] rounded flex items-center justify-center shadow-[0_0_10px_rgba(250,204,21,0.5)]">
-                <span className="text-[#070b12] font-bold text-xl">S</span>
-            </div>
-            <span className="hidden xl:block text-xl font-black text-white tracking-wider">SLY<span className="text-[#facc15]">SPORTS</span></span>
-          </Link>
+      {/* HEADER WITH MOBILE MENU FIX */}
+      <header className="bg-[#0d1422]/90 backdrop-blur-md border-b border-[#1c2638] sticky top-0 z-[110] shadow-lg">
+        <div className="flex items-center justify-between px-4 md:px-8 py-3 gap-4 max-w-[1500px] mx-auto relative">
+          
+          <div className="flex items-center gap-3">
+            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="lg:hidden text-white text-2xl p-1">
+              {isMobileMenuOpen ? '✖' : '☰'}
+            </button>
+
+            <Link href="/" className="flex items-center gap-2 flex-shrink-0 cursor-pointer">
+              <div className="w-8 h-8 bg-[#facc15] rounded flex items-center justify-center shadow-[0_0_10px_rgba(250,204,21,0.5)]">
+                  <span className="text-[#070b12] font-bold text-xl">S</span>
+              </div>
+              <span className="hidden sm:block text-xl font-black text-white tracking-wider">SLY<span className="text-[#facc15]">SPORTS</span></span>
+            </Link>
+          </div>
           
           <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-sm font-bold text-gray-400 uppercase tracking-wider flex-1 justify-center">
             <Link href="/" className="flex items-center gap-1.5 text-white border-b-2 border-[#facc15] pb-1"><span>⚽</span> {t.sports}</Link>
@@ -324,33 +400,42 @@ export default function Home() {
             <Link href="/contact" className="flex items-center gap-1.5 hover:text-[#facc15] transition pb-1"><span>📞</span> {t.contact}</Link>
           </nav>
 
-          <div className="flex gap-4 items-center justify-end flex-shrink-0">
-            <button onClick={() => setLang(lang === 'en' ? 'sw' : 'en')} className="bg-[#1c2638] text-white px-3 py-1.5 rounded text-xs font-bold uppercase hover:bg-[#26344d] transition border border-[#26344d]">
+          <div className="flex gap-2 sm:gap-4 items-center justify-end flex-shrink-0">
+            <button onClick={() => setLang(lang === 'en' ? 'sw' : 'en')} className="bg-[#1c2638] text-white px-2 py-1.5 sm:px-3 rounded text-[10px] sm:text-xs font-bold uppercase hover:bg-[#26344d] transition border border-[#26344d]">
                 {lang === 'en' ? '🇹🇿 SW' : '🇬🇧 EN'}
             </button>
             {isLoggedIn ? (
-              <div className="hidden sm:flex items-center gap-4">
-                <Link href="/dashboard" className="text-[#facc15] font-bold text-sm bg-[#facc15]/10 px-4 py-1.5 rounded border border-[#facc15]/30 hover:bg-[#facc15]/20 transition">
+              <div className="flex items-center gap-2 sm:gap-4">
+                <Link href="/dashboard" className="hidden sm:block text-[#facc15] font-bold text-sm bg-[#facc15]/10 px-4 py-1.5 rounded border border-[#facc15]/30 hover:bg-[#facc15]/20 transition">
                   {t.goToDashboard}
                 </Link>
-                <button onClick={handleLogout} className="bg-red-600/10 text-red-500 border border-red-500/30 px-4 py-1.5 rounded font-bold text-sm hover:bg-red-600 hover:text-white transition whitespace-nowrap">
+                <button onClick={handleLogout} className="bg-red-600/10 text-red-500 border border-red-500/30 px-3 sm:px-4 py-1.5 rounded font-bold text-[10px] sm:text-sm hover:bg-red-600 hover:text-white transition whitespace-nowrap">
                   {t.logout}
                 </button>
               </div>
             ) : (
-              <div className="hidden sm:flex items-center gap-4">
-                <Link href="/login" className="text-gray-300 hover:text-white font-bold text-sm transition cursor-pointer">{t.login}</Link>
-                <Link href="/register" className="bg-[#1e61d4] text-white px-5 xl:px-6 py-2 rounded font-bold text-sm hover:bg-[#2563eb] transition shadow-md whitespace-nowrap cursor-pointer">
+              <div className="flex items-center gap-2 sm:gap-4">
+                <Link href="/login" className="hidden sm:block text-gray-300 hover:text-white font-bold text-sm transition cursor-pointer">{t.login}</Link>
+                <Link href="/register" className="bg-[#1e61d4] text-white px-3 py-1.5 sm:px-5 xl:px-6 sm:py-2 rounded font-bold text-[10px] sm:text-sm hover:bg-[#2563eb] transition shadow-md whitespace-nowrap cursor-pointer">
                   {t.register}
                 </Link>
               </div>
             )}
           </div>
+
+          {isMobileMenuOpen && (
+            <div className="lg:hidden absolute top-[100%] left-0 w-full bg-[#0d1422] border-b border-[#1c2638] shadow-2xl flex flex-col z-[120]">
+               <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="p-4 border-b border-[#1c2638] text-white font-black uppercase text-sm flex items-center gap-3"><span>⚽</span> {t.sports}</Link>
+               <Link href="/aviator" onClick={() => setIsMobileMenuOpen(false)} className="p-4 border-b border-[#1c2638] text-gray-400 font-bold uppercase text-sm flex items-center gap-3 hover:text-white transition"><span>✈️</span> {t.aviator}</Link>
+               <Link href="/casino" onClick={() => setIsMobileMenuOpen(false)} className="p-4 border-b border-[#1c2638] text-gray-400 font-bold uppercase text-sm flex items-center gap-3 hover:text-white transition"><span>🎰</span> {t.casino}</Link>
+               <Link href="/contact" onClick={() => setIsMobileMenuOpen(false)} className="p-4 text-gray-400 font-bold uppercase text-sm flex items-center gap-3 hover:text-white transition"><span>📞</span> {t.contact}</Link>
+            </div>
+          )}
         </div>
       </header>
 
       {/* HERO SECTION */}
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 pt-6">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 pt-6 relative z-10">
         <div className="relative rounded-xl p-8 md:p-10 overflow-hidden shadow-2xl flex flex-col md:flex-row items-center justify-between gap-8 group border border-[#1c2638] min-h-[350px]">
           {heroSlides.map((slide, index) => (
             <div key={index} className={`absolute inset-0 bg-cover bg-center bg-fixed transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`} style={{ backgroundImage: slide.bg }}></div>
@@ -373,11 +458,36 @@ export default function Home() {
       </div>
 
       {/* MAIN LAYOUT */}
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 xl:grid-cols-4 gap-6">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 xl:grid-cols-4 gap-6 relative z-10">
         
-        {/* SIDEBAR YA KIPROFESA */}
-        <aside className="hidden xl:block col-span-1 space-y-5">
+        {/* MOBILE SIDEBAR TOGGLE BUTTON */}
+        <div className="xl:hidden">
+           <button 
+             onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)} 
+             className="w-full bg-[#0d1422] border border-[#1e61d4]/50 text-white p-4 rounded-xl shadow-lg font-black uppercase text-xs flex justify-between items-center transition"
+           >
+             <span className="flex items-center gap-2"><span className="text-lg">🛠️</span> Filter Leagues & AI Tools</span>
+             <span className="text-lg">{isMobileSidebarOpen ? '▲' : '▼'}</span>
+           </button>
+        </div>
+
+        {/* OVERLAY KWA AJILI YA MOBILE SIDEBAR */}
+        {isMobileSidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black/80 z-[140] xl:hidden backdrop-blur-sm"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          ></div>
+        )}
+
+        {/* SIDEBAR YA KIPROFESA (OFF-CANVAS KWA SIMU, GRID KWA PC) */}
+        <aside className={`fixed top-0 left-0 h-full w-[300px] bg-[#0d1422] border-r border-[#1c2638] p-5 z-[150] overflow-y-auto transition-transform duration-300 xl:relative xl:translate-x-0 xl:w-auto xl:h-auto xl:border-none xl:p-0 xl:z-0 xl:bg-transparent ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'} col-span-1 space-y-5`}>
           
+          {/* Kitufe cha Kufunga kwenye simu */}
+          <div className="flex justify-between items-center xl:hidden mb-6 border-b border-[#1c2638] pb-3">
+             <h2 className="text-white font-black text-sm uppercase tracking-widest">Sly Tools</h2>
+             <button onClick={() => setIsMobileSidebarOpen(false)} className="text-gray-400 hover:text-white text-2xl">✖</button>
+          </div>
+
           <div className="bg-[#0d1422] border border-[#facc15]/30 rounded-xl overflow-hidden shadow-xl relative sticky top-24">
              <div className="absolute -right-10 -top-10 w-24 h-24 bg-[#facc15]/10 rounded-full blur-2xl"></div>
              <div className="bg-gradient-to-r from-[#facc15] to-yellow-600 p-3 flex justify-between items-center relative z-10">
@@ -398,7 +508,6 @@ export default function Home() {
              </div>
           </div>
 
-          {/* AI AUTO GENERATOR ON LANDING PAGE */}
           <div className="bg-[#0d1422] border border-[#1c2638] rounded-xl p-4 shadow-xl">
              <h3 className="text-purple-400 font-black uppercase tracking-widest text-xs mb-3 border-b border-[#1c2638] pb-2 text-center">🤖 AI Slip Auto-Generator</h3>
              <p className="text-[9px] text-gray-400 text-center mb-4">Set your target odds. AI will automatically build a high-probability slip.</p>
@@ -425,57 +534,97 @@ export default function Home() {
           <div className="bg-[#0d1422] border border-[#1c2638] rounded-xl p-4 flex flex-col max-h-[40vh]">
             <h3 className="text-white text-[10px] font-black uppercase tracking-widest mb-3 border-b border-[#1c2638] pb-2">{t.leaguesToday}</h3>
             <div className="flex flex-col gap-2 overflow-y-auto pr-2 custom-scrollbar">
-                <button onClick={() => setSelectedLeague("ALL")} className={`p-2 rounded text-left text-xs transition-all ${selectedLeague === "ALL" ? "bg-[#1e61d4] text-white font-black" : "bg-[#162032] text-gray-400 hover:bg-[#1c2638]"}`}>🔥 {t.allMatches}</button>
+                <button onClick={() => {setSelectedLeague("ALL"); setIsMobileSidebarOpen(false);}} className={`p-2 rounded text-left text-xs transition-all ${selectedLeague === "ALL" ? "bg-[#1e61d4] text-white font-black" : "bg-[#162032] text-gray-400 hover:bg-[#1c2638]"}`}>🔥 {t.allMatches}</button>
                 {activeSidebarLeagues.map((league: any) => (
-                    <button key={league.key} onClick={() => setSelectedLeague(league.key)} className={`p-2 rounded text-left text-xs transition-all flex items-center gap-2 ${selectedLeague === league.key ? "bg-[#1e61d4] text-white font-black" : "bg-[#162032] text-gray-400 hover:bg-[#1c2638]"}`}>
+                    <button key={league.key} onClick={() => {setSelectedLeague(league.key); setIsMobileSidebarOpen(false);}} className={`p-2 rounded text-left text-xs transition-all flex items-center gap-2 ${selectedLeague === league.key ? "bg-[#1e61d4] text-white font-black" : "bg-[#162032] text-gray-400 hover:bg-[#1c2638]"}`}>
                       <span className="text-sm">{getSportIcon(league.name, league.icon)}</span> <span className="truncate">{league.name}</span>
                     </button>
                 ))}
             </div>
           </div>
 
-          {/* SOCIAL MEDIA & PARTNER BUTTONS */}
           <div className="space-y-4 mt-5">
-             <a href="https://whatsapp.com/channel/0029VbCbNM23gvWVS8NV8g3F" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-[#25D366] to-[#1DA851] text-white p-4 rounded-xl flex items-center justify-between shadow-[0_4px_15px_rgba(37,211,102,0.3)] hover:scale-105 transition-transform group border border-[#25D366]/50 block">
+             <a href="https://whatsapp.com/channel/0029VbCbNM23gvWVS8NV8g3F" target="_blank" rel="noopener noreferrer" className="bg-[#0d1422] border border-[#25D366]/50 hover:bg-[#25D366]/10 text-white p-4 rounded-xl flex items-center justify-between shadow-xl hover:scale-105 transition-all group block">
                 <div className="flex items-center gap-3">
-                   <span className="text-3xl animate-bounce">💬</span>
+                   <span className="text-3xl text-[#25D366]">💬</span>
                    <div>
-                      <h4 className="font-black text-[11px] uppercase leading-tight group-hover:text-yellow-200 transition-colors">{t.joinWhatsApp}</h4>
-                      <p className="text-[9px] text-white/90 font-bold uppercase mt-1 tracking-wider">{t.freeCodes}</p>
+                      <h4 className="font-black text-[11px] uppercase leading-tight group-hover:text-[#25D366] transition-colors">{t.joinWhatsApp}</h4>
+                      <p className="text-[9px] text-gray-400 font-bold uppercase mt-1 tracking-wider">{t.freeCodes}</p>
                    </div>
                 </div>
-                <span className="text-xl font-bold">➔</span>
+                <span className="text-xl font-bold text-[#25D366] group-hover:translate-x-1 transition-transform">➔</span>
              </a>
 
-             <a href="https://www.instagram.com/sly_sports_tips?igsh=ajNycHpobnNqNGl2" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F56040] text-white p-4 rounded-xl flex items-center justify-between shadow-[0_4px_15px_rgba(225,48,108,0.3)] hover:scale-105 transition-transform group border border-[#FD1D1D]/50 block">
+             <a href="https://www.instagram.com/sly_sports_tips?igsh=ajNycHpobnNqNGl2" target="_blank" rel="noopener noreferrer" className="bg-[#0d1422] border border-[#E1306C]/50 hover:bg-[#E1306C]/10 text-white p-4 rounded-xl flex items-center justify-between shadow-xl hover:scale-105 transition-all group block">
                 <div className="flex items-center gap-3">
-                   <span className="text-3xl">📸</span>
+                   <span className="text-3xl text-[#E1306C]">📸</span>
                    <div>
-                      <h4 className="font-black text-[11px] uppercase leading-tight group-hover:text-yellow-200 transition-colors">{t.joinInstagram}</h4>
-                      <p className="text-[9px] text-white/90 font-bold uppercase mt-1 tracking-wider">{t.dailyTips}</p>
+                      <h4 className="font-black text-[11px] uppercase leading-tight group-hover:text-[#E1306C] transition-colors">{t.joinInstagram}</h4>
+                      <p className="text-[9px] text-gray-400 font-bold uppercase mt-1 tracking-wider">{t.dailyTips}</p>
                    </div>
                 </div>
-                <span className="text-xl font-bold">➔</span>
+                <span className="text-xl font-bold text-[#E1306C] group-hover:translate-x-1 transition-transform">➔</span>
              </a>
 
-             <a href="https://lckypr.com/Slysports" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-[#facc15] to-[#d4af37] text-[#070b12] p-4 rounded-xl flex items-center justify-between shadow-[0_4px_15px_rgba(250,204,21,0.3)] hover:scale-105 transition-transform group border border-[#facc15]/50 block">
-                <div className="flex items-center gap-3">
-                   <span className="text-3xl animate-pulse">🎁</span>
-                   <div>
-                      <h4 className="font-black text-[11px] uppercase leading-tight group-hover:text-white transition-colors">Get 130% Bonus</h4>
-                      <p className="text-[9px] font-black uppercase mt-1 tracking-wider opacity-80">CODE: SLYSPORTS</p>
-                   </div>
+             {/* LUCKYPARI Card */}
+             <div className="bg-[#0d1422] border border-[#facc15]/30 rounded-xl overflow-hidden shadow-xl relative group hover:border-[#facc15] transition-all">
+                <div className="absolute -right-10 -top-10 w-24 h-24 bg-[#facc15]/10 rounded-full blur-2xl"></div>
+                <div className="bg-gradient-to-r from-[#facc15] to-yellow-600 p-3 flex justify-between items-center relative z-10">
+                   <h3 className="text-[#070b12] font-black text-[10px] uppercase">🎁 LuckyPari Promo</h3>
                 </div>
-                <span className="text-xl font-bold">➔</span>
-             </a>
+                <div className="p-4 text-center relative z-10">
+                   <p className="text-white font-black text-sm mb-3">130% DEPOSIT BONUS</p>
+                   <div className="bg-[#162032] border border-[#26344d] p-2 rounded flex justify-between items-center mb-3">
+                      <span className="text-[10px] font-bold text-gray-400">CODE:</span>
+                      <span className="text-xs font-black text-[#facc15]">SLYSPORTS</span>
+                   </div>
+                   <a href="https://lckypr.com/Slysports" target="_blank" rel="noopener noreferrer" className="block w-full bg-[#facc15] text-[#070b12] font-black py-2 rounded text-[10px] uppercase tracking-wider hover:bg-yellow-400 transition">
+                      Claim Bonus Now
+                   </a>
+                </div>
+             </div>
+
+             {/* Meridianbet Card */}
+             <div className="bg-[#0d1422] border border-red-500/30 rounded-xl overflow-hidden shadow-xl relative group hover:border-red-500 transition-all">
+                <div className="absolute -right-10 -top-10 w-24 h-24 bg-red-500/10 rounded-full blur-2xl"></div>
+                <div className="bg-gradient-to-r from-red-600 to-red-800 p-3 flex justify-between items-center relative z-10">
+                   <h3 className="text-white font-black text-[10px] uppercase">🔴 Meridianbet Promo</h3>
+                </div>
+                <div className="p-4 text-center relative z-10">
+                   <p className="text-white font-black text-sm mb-3">EXCLUSIVE SIGNUP BONUS</p>
+                   <div className="bg-[#162032] border border-[#26344d] p-2 rounded flex justify-between items-center mb-3">
+                      <span className="text-[10px] font-bold text-gray-400">CODE:</span>
+                      <span className="text-xs font-black text-red-500">SYLSPORTS</span>
+                   </div>
+                   <a href={lang === 'en' ? 'https://meridianbet.co.tz/en/sign-up' : 'https://meridianbet.co.tz/sw/jisajili'} target="_blank" rel="noopener noreferrer" className="block w-full bg-red-600 text-white font-black py-2 rounded text-[10px] uppercase tracking-wider hover:bg-red-500 transition">
+                      Claim Bonus Now
+                   </a>
+                </div>
+             </div>
+
+             {/* 888Starz Card */}
+             <div className="bg-[#0d1422] border border-green-500/30 rounded-xl overflow-hidden shadow-xl relative group hover:border-green-500 transition-all">
+                <div className="absolute -right-10 -top-10 w-24 h-24 bg-green-500/10 rounded-full blur-2xl"></div>
+                <div className="bg-gradient-to-r from-green-500 to-green-700 p-3 flex justify-between items-center relative z-10">
+                   <h3 className="text-white font-black text-[10px] uppercase">🟢 888Starz Promo</h3>
+                </div>
+                <div className="p-4 text-center relative z-10">
+                   <p className="text-white font-black text-sm mb-3">PREMIUM BETTING BONUS</p>
+                   <div className="bg-[#162032] border border-[#26344d] p-2 rounded flex justify-between items-center mb-3">
+                      <span className="text-[10px] font-bold text-gray-400">STATUS:</span>
+                      <span className="text-xs font-black text-green-500">ACTIVE</span>
+                   </div>
+                   <a href="https://top100bonus.com/L?tag=d_5541916m_64133c_&site=5541916&ad=64133" target="_blank" rel="noopener noreferrer" className="block w-full bg-green-500 text-white font-black py-2 rounded text-[10px] uppercase tracking-wider hover:bg-green-400 transition">
+                      Get Bonus Now
+                   </a>
+                </div>
+             </div>
           </div>
-
         </aside>
 
         {/* MATCH LIST (KULIA) */}
         <div className="col-span-1 xl:col-span-3">
           
-          {/* TOP ACCA COMBOS (LOCKED ON LANDING PAGE) */}
           {!isLoading && topCombos.length > 0 && (
             <div className="mb-10">
               <div className="flex items-center gap-2 mb-4 border-l-4 border-purple-500 pl-3">
@@ -500,7 +649,6 @@ export default function Home() {
                       </div>
                       
                       <div className="space-y-2 mb-4 relative">
-                         {/* Blur Effect on Matches for Guests */}
                          {!isLoggedIn && <div className="absolute inset-0 bg-[#0d1422]/60 backdrop-blur-[3px] z-10 flex items-center justify-center rounded-lg">
                              <Link href="/login" className="bg-purple-600 hover:bg-purple-700 text-white font-black px-6 py-2 rounded-lg shadow-[0_0_15px_rgba(168,85,247,0.4)] transition uppercase text-xs tracking-widest flex items-center gap-2 text-center">
                                 🔒 {t.loginToView}
@@ -570,7 +718,7 @@ export default function Home() {
 
       {/* FLOATING SLIP BUILDER */}
       {betslip.length > 0 && (
-        <div className={`fixed bottom-0 md:bottom-10 right-0 md:right-10 w-full md:w-80 bg-[#0d1422] md:border border-[#1e61d4] rounded-t-xl md:rounded-xl shadow-[0_-10px_40px_rgba(0,0,0,0.8)] md:shadow-[0_10px_50px_rgba(30,97,212,0.3)] z-50 transition-transform duration-300 ${isSlipOpen ? 'translate-y-0' : 'translate-y-[calc(100%-60px)]'}`}>
+        <div className={`fixed bottom-0 md:bottom-10 right-0 md:right-[5rem] w-full md:w-80 bg-[#0d1422] md:border border-[#1e61d4] rounded-t-xl md:rounded-xl shadow-[0_-10px_40px_rgba(0,0,0,0.8)] md:shadow-[0_10px_50px_rgba(30,97,212,0.3)] z-[95] transition-transform duration-300 ${isSlipOpen ? 'translate-y-0' : 'translate-y-[calc(100%-60px)]'}`}>
           <div onClick={() => setIsSlipOpen(!isSlipOpen)} className="bg-[#1e61d4] text-white p-4 md:rounded-t-xl cursor-pointer flex justify-between items-center font-black uppercase text-sm">
             <span>🎟️ {t.betslip} ({betslip.length})</span>
             <span>{isSlipOpen ? '▼' : '▲'}</span>
@@ -600,12 +748,28 @@ export default function Home() {
               <span className="text-gray-400 font-bold uppercase text-xs">Win Probability</span>
               <span className={`text-sm font-black ${slipProb >= 70 ? 'text-green-500' : slipProb >= 40 ? 'text-yellow-500' : 'text-red-500'}`}>{slipProb}%</span>
             </div>
+            
+            {/* VIFUNGO VYA WASHIRIKA KWA BETSLIP */}
             {isLoggedIn ? (
-              <a href="https://1xbet.com" target="_blank" rel="noopener noreferrer" className="block text-center w-full bg-[#facc15] text-[#070b12] py-3 rounded font-black uppercase text-sm hover:bg-yellow-500 transition shadow-lg shadow-yellow-500/20">
-                 {t.signInBet}
-              </a>
+              <div className="mt-3 border-t border-[#1c2638] pt-3">
+                <p className="text-[10px] text-gray-400 font-bold uppercase text-center mb-3">{t.signInBet}</p>
+                <div className="flex flex-col gap-2">
+                    <a href="https://lckypr.com/Slysports" target="_blank" rel="noopener noreferrer" className="flex justify-between items-center bg-[#1c2638] hover:bg-[#26344d] border border-[#26344d] hover:border-[#facc15] p-3 rounded-lg transition group">
+                        <span className="text-white font-black text-xs uppercase">LuckyPari</span>
+                        <span className="bg-[#facc15]/10 text-[#facc15] px-2 py-1 rounded text-[9px] font-black">CODE: SLYSPORTS</span>
+                    </a>
+                    <a href={lang === 'en' ? 'https://meridianbet.co.tz/en/sign-up' : 'https://meridianbet.co.tz/sw/jisajili'} target="_blank" rel="noopener noreferrer" className="flex justify-between items-center bg-[#1c2638] hover:bg-[#26344d] border border-[#26344d] hover:border-red-500 p-3 rounded-lg transition group">
+                        <span className="text-white font-black text-xs uppercase">Meridianbet</span>
+                        <span className="bg-red-500/10 text-red-500 px-2 py-1 rounded text-[9px] font-black">CODE: SYLSPORTS</span>
+                    </a>
+                    <a href="https://top100bonus.com/L?tag=d_5541916m_64133c_&site=5541916&ad=64133" target="_blank" rel="noopener noreferrer" className="flex justify-between items-center bg-[#1c2638] hover:bg-[#26344d] border border-[#26344d] hover:border-green-500 p-3 rounded-lg transition group">
+                        <span className="text-white font-black text-xs uppercase">888Starz</span>
+                        <span className="bg-green-500/10 text-green-500 px-2 py-1 rounded text-[9px] font-black">GET BONUS 🎁</span>
+                    </a>
+                </div>
+              </div>
             ) : (
-              <Link href="/login" className="block text-center w-full bg-[#1e61d4] text-white py-3 rounded font-black uppercase text-sm transition hover:bg-[#2563eb] shadow-lg shadow-blue-500/20">
+              <Link href="/login" className="block text-center w-full bg-[#1e61d4] text-white py-3 rounded font-black uppercase text-sm transition hover:bg-[#2563eb] shadow-lg shadow-blue-500/20 mt-2">
                 {t.loginSave}
               </Link>
             )}
@@ -613,14 +777,128 @@ export default function Home() {
         </div>
       )}
 
-      {/* DISCLAIMER */}
-      <footer className="bg-[#090d16] border-t border-[#1c2638] py-8 mt-10 text-center mb-16 md:mb-0">
-        <div className="max-w-7xl mx-auto px-6">
-          <p className="text-gray-500 text-xs max-w-xl mx-auto leading-relaxed">
-            {t.disclaimer} 
-            <span className="font-bold text-gray-400 block my-2">{t.disclaimerWarn}</span> 
-            {t.disclaimerAge}
-          </p>
+      {/* LIVE CHAT WIDGET 💬 */}
+      <div className="fixed bottom-20 md:bottom-10 right-4 md:right-10 z-[100] flex flex-col items-end">
+        {isChatOpen && (
+          <div className="bg-[#0d1422] border border-[#1c2638] rounded-2xl shadow-2xl w-[280px] sm:w-[320px] mb-4 flex flex-col h-[350px] overflow-hidden animate-fade-in">
+             <div className="bg-gradient-to-r from-[#1e61d4] to-[#2563eb] p-4 flex justify-between items-center text-white">
+                <div className="flex items-center gap-2">
+                   <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-xl">🤖</div>
+                   <div>
+                      <h3 className="font-black text-xs uppercase tracking-wide">Sly AI Support</h3>
+                      <p className="text-[9px] text-blue-200 flex items-center gap-1"><span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span> Online</p>
+                   </div>
+                </div>
+                <button onClick={() => setIsChatOpen(false)} className="text-white/70 hover:text-white transition text-lg">✖</button>
+             </div>
+             <div className="flex-1 p-4 overflow-y-auto bg-[#070b12] space-y-3 custom-scrollbar">
+                {chatMsgs.map((msg, i) => (
+                   <div key={i} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[85%] p-3 rounded-xl text-xs font-medium leading-relaxed ${msg.sender === 'user' ? 'bg-[#1e61d4] text-white rounded-br-none shadow-md' : 'bg-[#1c2638] text-gray-200 rounded-bl-none border border-[#26344d] shadow-md'}`}>
+                         {msg.text}
+                      </div>
+                   </div>
+                ))}
+             </div>
+             <form onSubmit={handleSendChat} className="p-3 bg-[#0d1422] border-t border-[#1c2638] flex gap-2">
+                <input 
+                  type="text" 
+                  value={chatInput} 
+                  onChange={(e) => setChatInput(e.target.value)} 
+                  placeholder={lang === 'en' ? "Type a message..." : "Andika ujumbe..."} 
+                  className="flex-1 bg-[#162032] border border-[#26344d] text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-[#1e61d4] transition"
+                />
+                <button type="submit" className="bg-[#facc15] text-[#070b12] px-4 py-2 rounded-lg font-black text-xs hover:bg-yellow-400 transition shadow-md">➤</button>
+             </form>
+          </div>
+        )}
+        <button 
+          onClick={() => setIsChatOpen(!isChatOpen)} 
+          className="w-14 h-14 bg-gradient-to-r from-[#1e61d4] to-[#2563eb] rounded-full flex items-center justify-center shadow-[0_10px_25px_rgba(30,97,212,0.6)] hover:scale-110 transition-transform relative border-2 border-white/10"
+        >
+           {isChatOpen ? (
+             <span className="text-white text-xl font-bold">✖</span>
+           ) : (
+             <>
+               <span className="text-white text-2xl">💬</span>
+               <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-red-500 border-2 border-[#070b12] rounded-full"></span>
+             </>
+           )}
+        </button>
+      </div>
+
+      {/* ========================================== */}
+      {/* PROFESSIONAL FOOTER YENYE MPANGILIO MPYA */}
+      {/* ========================================== */}
+      <footer className="bg-[#090d16] border-t border-[#1c2638] pt-12 pb-24 md:pb-12 mt-10 relative z-10">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 items-start">
+            
+            {/* 1. Kushoto (Quick Links na Mitandao ya Kijamii) */}
+            <div className="text-center md:text-left flex flex-col items-center md:items-start">
+               <h4 className="text-white font-black text-[11px] uppercase tracking-widest mb-4 border-b border-[#1c2638] pb-2 inline-block md:block w-full md:w-auto">{t.quickLinks}</h4>
+               <nav className="flex flex-wrap justify-center md:justify-start gap-x-4 gap-y-2 mb-6">
+                 <Link href="/" className="text-gray-400 hover:text-white text-xs font-bold transition">{t.sports}</Link>
+                 <Link href="/aviator" className="text-gray-400 hover:text-white text-xs font-bold transition">{t.aviator}</Link>
+                 <Link href="/casino" className="text-gray-400 hover:text-white text-xs font-bold transition">{t.casino}</Link>
+                 <Link href="/contact" className="text-gray-400 hover:text-white text-xs font-bold transition">{t.contact}</Link>
+               </nav>
+
+               <div className="flex gap-4 justify-center md:justify-start">
+                  <a href="https://whatsapp.com/channel/0029VbCbNM23gvWVS8NV8g3F" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-[#25D366]/10 text-[#25D366] rounded-full flex items-center justify-center text-xl hover:bg-[#25D366] hover:text-white hover:scale-110 transition-all border border-[#25D366]/30">
+                     💬
+                  </a>
+                  <a href="https://www.instagram.com/sly_sports_tips?igsh=ajNycHpobnNqNGl2" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-[#E1306C]/10 text-[#E1306C] rounded-full flex items-center justify-center text-xl hover:bg-[#E1306C] hover:text-white hover:scale-110 transition-all border border-[#E1306C]/30">
+                     📸
+                  </a>
+               </div>
+            </div>
+
+            {/* 2. Katikati (Logo na Onyo 18+) */}
+            <div className="text-center flex flex-col items-center">
+               <Link href="/" className="flex items-center gap-2 mb-4 cursor-pointer hover:scale-105 transition-transform">
+                  <div className="w-10 h-10 bg-[#facc15] rounded flex items-center justify-center shadow-[0_0_15px_rgba(250,204,21,0.5)]">
+                      <span className="text-[#070b12] font-bold text-2xl">S</span>
+                  </div>
+                  <span className="text-2xl font-black text-white tracking-wider">SLY<span className="text-[#facc15]">SPORTS</span></span>
+               </Link>
+               
+               <div className="inline-block border-2 border-red-500 rounded-full w-12 h-12 flex items-center justify-center mb-3 shadow-[0_0_15px_rgba(239,68,68,0.3)]">
+                  <span className="text-red-500 font-black text-lg">18+</span>
+               </div>
+               
+               <p className="text-gray-500 text-[10px] leading-relaxed max-w-sm uppercase font-bold tracking-wider">
+                  {t.disclaimerWarn} <br/> {t.disclaimerAge}
+               </p>
+            </div>
+
+            {/* 3. Kulia (Useful Links / Mamlaka za TZ) */}
+            <div className="text-center md:text-right flex flex-col items-center md:items-end">
+               <h4 className="text-white font-black text-[11px] uppercase tracking-widest mb-4 border-b border-[#1c2638] pb-2 inline-block md:block w-full md:w-auto">{t.usefulLinks}</h4>
+               <div className="flex flex-col items-center md:items-end gap-3">
+                  <a href="https://www.fiu.go.tz/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#1e61d4] transition text-xs font-bold flex items-center justify-center md:justify-end gap-2 group">
+                     <span className="text-lg group-hover:scale-110 transition-transform">⚖️</span> Financial Intelligence Unit (FIU)
+                  </a>
+                  <a href="https://www.gamingboard.go.tz/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#facc15] transition text-xs font-bold flex items-center justify-center md:justify-end gap-2 group">
+                     <span className="text-lg group-hover:scale-110 transition-transform">🎰</span> Gaming Board of Tanzania
+                  </a>
+                  <a href="https://www.tcra.go.tz/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#25D366] transition text-xs font-bold flex items-center justify-center md:justify-end gap-2 group">
+                     <span className="text-lg group-hover:scale-110 transition-transform">📡</span> TCRA Tanzania
+                  </a>
+                  <a href="#" className="text-gray-400 hover:text-red-500 transition text-xs font-bold flex items-center justify-center md:justify-end gap-2 group">
+                     <span className="text-lg group-hover:scale-110 transition-transform">🛑</span> {lang === 'en' ? 'Responsible Gaming' : 'Cheza Kistaarabu'}
+                  </a>
+               </div>
+            </div>
+
+          </div>
+          
+          {/* Haki Miliki */}
+          <div className="border-t border-[#1c2638] mt-10 pt-6 text-center">
+             <p className="text-gray-600 text-[9px] sm:text-[10px] uppercase font-bold tracking-widest">
+               © {new Date().getFullYear()} SLYSPORTS TIPS. {lang === 'en' ? 'ALL RIGHTS RESERVED.' : 'HAKI ZOTE ZIMEHIFADHIWA.'}
+             </p>
+          </div>
         </div>
       </footer>
 
@@ -640,6 +918,14 @@ export default function Home() {
         .custom-scrollbar::-webkit-scrollbar-track { background: #0d1422; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #1c2638; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #1e61d4; }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.3s ease-out forwards;
+        }
       `}</style>
     </main>
   );

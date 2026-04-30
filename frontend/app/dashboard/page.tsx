@@ -3,6 +3,94 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 // ==========================================
+// KAMUSI YA LUGHA
+// ==========================================
+const translations = {
+  en: {
+    sports: "Sports", aviator: "Aviator", casino: "Casino", contact: "Contact Us",
+    goToDashboard: "Go to Dashboard", logout: "Logout", login: "Login", register: "Register",
+    createFreeAccount: "Create Free Account",
+    leaguesToday: "🏆 Leagues & Sports",
+    allMatches: "🔥 All Matches",
+    betOfTheDay: "⭐ Bet of the Day",
+    topTenPicks: "💎 Premium Acca Combos",
+    loginToView: "🔒 Login to View Premium Acca",
+    aiPrediction: "AI Prediction",
+    scanningPicks: "Scanning for top picks...",
+    joinWhatsApp: "Join VIP WhatsApp Group",
+    joinInstagram: "Follow Us on Instagram",
+    freeCodes: "Free Codes & Updates",
+    dailyTips: "Daily Tips & Slips",
+    liveHighlights: "Live Highlights",
+    searchPlaceholder: "Search team or league...",
+    loadingOdds: "Loading Live Odds...",
+    noMatches: "No matches found.",
+    trySearching: "Try searching a different team or selecting 'All' leagues.",
+    searchResults: "Search Results from Other Leagues",
+    viewAllOther: "▼ View All Other Leagues",
+    hideOther: "▲ Hide Other Leagues",
+    matchDetails: "Match Details",
+    status: "Status",
+    prediction: "Prediction",
+    action: "Action",
+    vipOnly: "🔒 Login for AI Pick",
+    remove: "REMOVE",
+    addSlip: "+ SLIP",
+    totalOdds: "Total Odds",
+    signInBet: "Select Bookmaker To Bet",
+    loginSave: "Login to Save Slip",
+    betslip: "Betslip",
+    disclaimer: "Sly Sports Tips provides expert sports predictions and AI analysis.",
+    disclaimerWarn: "We are not a betting company. We do not accept deposits or handle bets. We only provide expert predictions.",
+    disclaimerAge: "18+ Must be 18 years or older to use our services. Please play responsibly.",
+    chatHello: "Hello! How can we help you today with our AI Predictions?",
+    usefulLinks: "Useful Links",
+    quickLinks: "Quick Links"
+  },
+  sw: {
+    sports: "Michezo", aviator: "Aviator", casino: "Kasino", contact: "Wasiliana Nasi",
+    goToDashboard: "Nenda Dashibodi", logout: "Toka", login: "Ingia", register: "Jisajili",
+    createFreeAccount: "Tengeneza Akaunti Bure",
+    leaguesToday: "🏆 Ligi & Michezo",
+    allMatches: "🔥 Mechi Zote",
+    betOfTheDay: "⭐ Mkeka Wa Leo",
+    topTenPicks: "💎 Mikeka ya Uhakika (Combos)",
+    loginToView: "🔒 Ingia Kuona Mkeka Huu",
+    aiPrediction: "Utabiri wa AI",
+    scanningPicks: "Inatafuta mechi bora...",
+    joinWhatsApp: "Jiunge na WhatsApp Channel",
+    joinInstagram: "Tufuatilie Instagram",
+    freeCodes: "Pata Code Bure Kila Siku",
+    dailyTips: "Uchambuzi wa Kila Siku",
+    liveHighlights: "Mechi Zinazoendelea",
+    searchPlaceholder: "Tafuta timu au ligi...",
+    loadingOdds: "Inapakua Odds...",
+    noMatches: "Hakuna mechi zilizopatikana.",
+    trySearching: "Jaribu kutafuta timu nyingine au chagua 'Mechi Zote'.",
+    searchResults: "Matokeo Kutoka Ligi Nyingine",
+    viewAllOther: "▼ Tazama Ligi Nyingine Zote",
+    hideOther: "▲ Ficha Ligi Nyingine",
+    matchDetails: "Maelezo Ya Mechi",
+    status: "Muda",
+    prediction: "Utabiri",
+    action: "Tendo",
+    vipOnly: "🔒 Ingia Kuona Utabiri",
+    remove: "ONDOA",
+    addSlip: "+ WEKA",
+    totalOdds: "Jumla ya Odds",
+    signInBet: "Chagua Kampuni Ya Kubeti",
+    loginSave: "Ingia Kuhifadhi Mkeka",
+    betslip: "Mkeka Wako",
+    disclaimer: "Sly Sports Tips inatoa uchambuzi wa kitaalamu na utabiri wa AI.",
+    disclaimerWarn: "Sisi hatuusiki na uchezeshaji wa kamari, tunatoa utabiri tu. Tofauti na kampuni za kubeti, sisi haturuhusu kuweka pesa.",
+    disclaimerAge: "18+ Lazima uwe na miaka 18 au zaidi kutumia huduma zetu. Cheza kistaarabu.",
+    chatHello: "Jambo! Tukusaidie vipi leo kuhusu Mikeka na Utabiri wetu?",
+    usefulLinks: "Viungo Muhimu",
+    quickLinks: "Kurasa Zetu"
+  }
+};
+
+// ==========================================
 // DYNAMIC ICONS HELPER 
 // ==========================================
 const getSportIcon = (leagueName: string, defaultIcon?: string) => {
@@ -45,13 +133,24 @@ export default function Dashboard() {
   const [toastMsg, setToastMsg] = useState("");
   const [user, setUser] = useState<any>(null);
   
-  // Tabs: dashboard, admin, scanner, builder, results
+  // Lugha & T (HII NDIO ILIYOKOSEKANA YAKALETA ERROR T)
+  const [lang, setLang] = useState<"en" | "sw">("en");
+  const t = translations[lang];
+
   const [activeTab, setActiveTab] = useState("dashboard"); 
   const [betslip, setBetslip] = useState<any[]>([]);
   const [isSlipOpen, setIsSlipOpen] = useState(false); 
   
+  // Mobile Sidebar Toggle
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Live Chat
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatMsgs, setChatMsgs] = useState<{sender: string, text: string}[]>([]);
+
   const [betOfTheDay, setBetOfTheDay] = useState<any>(null);
-  const [dynamicStats, setDynamicStats] = useState({ winRate: "84.2", streak: 12, total: 452 });
   const [topCombos, setTopCombos] = useState<any[]>([]); 
   const [allAvailableMatches, setAllAvailableMatches] = useState<any[]>([]);
 
@@ -62,6 +161,10 @@ export default function Dashboard() {
   const [isGenerating, setIsGenerating] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    setChatMsgs([{ sender: 'bot', text: t.chatHello }]);
+  }, [lang, t.chatHello]);
 
   useEffect(() => {
     const userData = localStorage.getItem("slyUser");
@@ -76,7 +179,6 @@ export default function Dashboard() {
         const cacheBuster = new Date().getTime();
         const baseUrl = typeof window !== 'undefined' && window.location.hostname === "localhost" ? "http://127.0.0.1:8000" : "";
         
-        // Vuta Data Zote kwa pamoja
         const [resMatches, resSlips] = await Promise.all([
             fetch(`${baseUrl}/api/mikeka?t=${cacheBuster}`, { cache: "no-store" }),
             fetch(`${baseUrl}/api/admin/slips`, { cache: "no-store" })
@@ -173,17 +275,29 @@ export default function Dashboard() {
     }
   };
 
+  const handleSendChat = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+    const userMsg = { sender: 'user', text: chatInput };
+    setChatMsgs([...chatMsgs, userMsg]);
+    setChatInput("");
+
+    setTimeout(() => {
+        setChatMsgs(prev => [...prev, { sender: 'bot', text: lang === 'en' ? "Thanks for reaching out! A support agent will connect with you shortly. For immediate help, click our WhatsApp link." : "Asante kwa ujumbe wako. Wakala wetu atawasiliana nawe hivi punde. Kwa msaada wa haraka zaidi, tumia link yetu ya WhatsApp." }]);
+    }, 1000);
+  };
+
   const toggleBetslip = (match: any, userPick: string, userOdd: string) => {
     const exists = betslip.find((m: any) => m.id === match.id);
     let newSlip = betslip.filter((m: any) => m.id !== match.id);
     
     if (exists && exists.userPick === userPick) {
       setBetslip(newSlip);
-      showToast("❌ Removed from Slip");
+      showToast(lang === 'en' ? "❌ Removed from Slip" : "❌ Imetolewa kwenye Mkeka");
     } else {
       newSlip.push({ ...match, userPick, userOdd });
       setBetslip(newSlip);
-      showToast(`✅ Added: ${userPick} @ ${userOdd}`);
+      showToast(lang === 'en' ? `✅ Added: ${userPick} @ ${userOdd}` : `✅ Imeongezwa: ${userPick} @ ${userOdd}`);
       if (!isSlipOpen) setIsSlipOpen(true);
     }
   };
@@ -271,19 +385,38 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-[#070b12] text-gray-200 font-sans flex flex-col md:flex-row selection:bg-[#facc15] selection:text-black relative">
       
+      {/* ========================================== */}
+      {/* STADIUM BACKGROUND (Dashboard View) */}
+      {/* ========================================== */}
+      <div className="fixed inset-0 z-[0] bg-[#070b12] pointer-events-none">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center opacity-10"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-[#070b12]/50 via-[#070b12]/90 to-[#070b12]"></div>
+      </div>
+
       {toastMsg && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 bg-[#facc15] text-[#070b12] px-6 py-3 rounded-md shadow-2xl z-[100] font-black animate-bounce flex items-center gap-2">
           {toastMsg}
         </div>
       )}
 
-      {/* --- SIDEBAR YA KIPROFESA --- */}
-      <aside className="w-full md:w-64 bg-[#0d1422] border-r border-[#1c2638] flex-shrink-0 sticky top-0 md:h-screen md:overflow-y-auto shadow-xl z-20">
-        <div className="p-6 border-b border-[#1c2638] flex items-center justify-between">
+      {/* --- OVERLAY KWA MOBILE SIDEBAR --- */}
+      {isMobileSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-[140] md:hidden backdrop-blur-sm"
+          onClick={() => setIsMobileSidebarOpen(false)}
+        ></div>
+      )}
+
+      {/* --- SIDEBAR YA KIPROFESA (Off-Canvas for Mobile) --- */}
+      <aside className={`fixed md:relative top-0 left-0 h-full w-[280px] md:w-64 bg-[#0d1422] border-r border-[#1c2638] flex-shrink-0 shadow-2xl md:shadow-none z-[150] transition-transform duration-300 md:translate-x-0 ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'} overflow-y-auto custom-scrollbar`}>
+        
+        {/* Header ya Sidebar */}
+        <div className="p-6 border-b border-[#1c2638] flex items-center justify-between sticky top-0 bg-[#0d1422] z-10">
           <Link href="/" className="flex items-center gap-2 cursor-pointer">
             <div className="w-8 h-8 bg-[#facc15] rounded flex items-center justify-center shadow-[0_0_10px_rgba(250,204,21,0.5)]"><span className="text-[#070b12] font-bold text-xl">S</span></div>
             <span className="text-xl font-black text-white tracking-wider">SLY<span className="text-[#facc15]">VIP</span></span>
           </Link>
+          <button onClick={() => setIsMobileSidebarOpen(false)} className="md:hidden text-gray-400 hover:text-white text-2xl">✖</button>
         </div>
 
         <div className="p-4">
@@ -295,40 +428,107 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <nav className="space-y-2">
-            <button onClick={() => setActiveTab("dashboard")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-md font-bold text-sm transition border-l-4 ${activeTab === "dashboard" ? "bg-[#1e61d4]/10 text-[#5c98ff] border-[#1e61d4]" : "text-gray-400 hover:bg-[#162032] border-transparent"}`}>
+          <nav className="space-y-2 mb-8">
+            <button onClick={() => {setActiveTab("dashboard"); setIsMobileSidebarOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-md font-bold text-sm transition border-l-4 ${activeTab === "dashboard" ? "bg-[#1e61d4]/10 text-[#5c98ff] border-[#1e61d4]" : "text-gray-400 hover:bg-[#162032] border-transparent"}`}>
               <span>📊</span> Live AI Picks
             </button>
-            <button onClick={() => setActiveTab("admin")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-md font-bold text-sm transition border-l-4 ${activeTab === "admin" ? "bg-[#facc15]/10 text-[#facc15] border-[#facc15]" : "text-gray-400 hover:bg-[#162032] border-transparent"}`}>
+            <button onClick={() => {setActiveTab("admin"); setIsMobileSidebarOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-md font-bold text-sm transition border-l-4 ${activeTab === "admin" ? "bg-[#facc15]/10 text-[#facc15] border-[#facc15]" : "text-gray-400 hover:bg-[#162032] border-transparent"}`}>
               <span>👑</span> VIP Slips
             </button>
-            <button onClick={() => setActiveTab("results")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-md font-bold text-sm transition border-l-4 ${activeTab === "results" ? "bg-green-500/10 text-green-500 border-green-500" : "text-gray-400 hover:bg-[#162032] border-transparent"}`}>
+            <button onClick={() => {setActiveTab("results"); setIsMobileSidebarOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-md font-bold text-sm transition border-l-4 ${activeTab === "results" ? "bg-green-500/10 text-green-500 border-green-500" : "text-gray-400 hover:bg-[#162032] border-transparent"}`}>
               <span>✅</span> Match Results
             </button>
-            <button onClick={() => setActiveTab("scanner")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-md font-bold text-sm transition border-l-4 ${activeTab === "scanner" ? "bg-purple-500/10 text-purple-400 border-purple-500" : "text-gray-400 hover:bg-[#162032] border-transparent"}`}>
+            <button onClick={() => {setActiveTab("scanner"); setIsMobileSidebarOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-md font-bold text-sm transition border-l-4 ${activeTab === "scanner" ? "bg-purple-500/10 text-purple-400 border-purple-500" : "text-gray-400 hover:bg-[#162032] border-transparent"}`}>
               <span>🤖</span> AI Slip Scanner
             </button>
-            <button onClick={() => setActiveTab("builder")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-md font-bold text-sm transition border-l-4 ${activeTab === "builder" ? "bg-[#1e61d4]/10 text-[#5c98ff] border-[#1e61d4]" : "text-gray-400 hover:bg-[#162032] border-transparent"}`}>
+            <button onClick={() => {setActiveTab("builder"); setIsMobileSidebarOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-md font-bold text-sm transition border-l-4 ${activeTab === "builder" ? "bg-[#1e61d4]/10 text-[#5c98ff] border-[#1e61d4]" : "text-gray-400 hover:bg-[#162032] border-transparent"}`}>
               <span>🎟️</span> My Builder <span className={`ml-auto text-[10px] px-2 py-0.5 rounded font-black ${betslip.length > 0 ? "bg-[#facc15] text-[#070b12]" : "bg-gray-700 text-white"}`}>{betslip.length}</span>
             </button>
           </nav>
-        </div>
 
-        <div className="p-4 mt-auto">
-          {user.role === 'admin' && (
-            <Link href="/admin" className="flex items-center justify-center gap-2 w-full bg-[#1c2638] text-white px-4 py-3 rounded-md font-bold text-sm transition border border-[#26344d] hover:bg-[#26344d] mb-3">
-              <span>⚡</span> Switch to Master Admin
-            </Link>
-          )}
-          <button onClick={handleLogout} className="flex items-center justify-center gap-2 w-full bg-[#162032] text-gray-400 hover:text-white px-4 py-3 rounded-md font-bold text-sm transition border border-[#26344d] hover:border-red-500 hover:bg-red-500/10">
-            <span>🚪</span> Log Out
-          </button>
+          {/* ========================================== */}
+          {/* AFFILIATE CARDS (KAMA "BET OF THE DAY") */}
+          {/* ========================================== */}
+          <div className="space-y-4 mb-8">
+             <h3 className="text-gray-500 font-bold text-[10px] uppercase tracking-widest pl-2">Exclusive Partner Offers</h3>
+             
+             {/* LuckyPari */}
+             <div className="bg-[#0d1422] border border-[#1c2638] rounded-xl overflow-hidden shadow-lg group">
+                <div className="bg-[#facc15] p-2 flex items-center justify-center gap-2">
+                   <span className="text-[#070b12] font-black text-[10px] uppercase tracking-wider">🎁 LuckyPari Bonus</span>
+                </div>
+                <div className="p-3 text-center">
+                   <p className="text-white font-bold text-xs mb-2">130% DEPOSIT MATCH</p>
+                   <div className="bg-[#162032] border border-[#26344d] p-1.5 rounded flex justify-between items-center mb-2">
+                      <span className="text-[9px] text-gray-500 uppercase">CODE:</span>
+                      <span className="text-[10px] font-black text-[#facc15]">SLYSPORTS</span>
+                   </div>
+                   <a href="https://lckypr.com/Slysports" target="_blank" rel="noopener noreferrer" className="block w-full bg-[#1c2638] text-white border border-[#26344d] hover:bg-[#facc15] hover:text-black font-bold py-1.5 rounded text-[9px] uppercase tracking-wider transition">Claim Now</a>
+                </div>
+             </div>
+
+             {/* Meridianbet */}
+             <div className="bg-[#0d1422] border border-[#1c2638] rounded-xl overflow-hidden shadow-lg group">
+                <div className="bg-red-600 p-2 flex items-center justify-center gap-2">
+                   <span className="text-white font-black text-[10px] uppercase tracking-wider">🔴 Meridianbet</span>
+                </div>
+                <div className="p-3 text-center">
+                   <p className="text-white font-bold text-xs mb-2">NEW USER BONUS</p>
+                   <div className="bg-[#162032] border border-[#26344d] p-1.5 rounded flex justify-between items-center mb-2">
+                      <span className="text-[9px] text-gray-500 uppercase">CODE:</span>
+                      <span className="text-[10px] font-black text-red-500">SYLSPORTS</span>
+                   </div>
+                   <a href={lang === 'en' ? 'https://meridianbet.co.tz/en/sign-up' : 'https://meridianbet.co.tz/sw/jisajili'} target="_blank" rel="noopener noreferrer" className="block w-full bg-[#1c2638] text-white border border-[#26344d] hover:bg-red-600 font-bold py-1.5 rounded text-[9px] uppercase tracking-wider transition">Claim Now</a>
+                </div>
+             </div>
+
+             {/* 888Starz */}
+             <div className="bg-[#0d1422] border border-[#1c2638] rounded-xl overflow-hidden shadow-lg group">
+                <div className="bg-green-600 p-2 flex items-center justify-center gap-2">
+                   <span className="text-white font-black text-[10px] uppercase tracking-wider">🟢 888Starz</span>
+                </div>
+                <div className="p-3 text-center">
+                   <p className="text-white font-bold text-xs mb-2">PREMIUM BETTING</p>
+                   <div className="bg-[#162032] border border-[#26344d] p-1.5 rounded flex justify-between items-center mb-2">
+                      <span className="text-[9px] text-gray-500 uppercase">STATUS:</span>
+                      <span className="text-[10px] font-black text-green-500">ACTIVE</span>
+                   </div>
+                   <a href="https://top100bonus.com/L?tag=d_5541916m_64133c_&site=5541916&ad=64133" target="_blank" rel="noopener noreferrer" className="block w-full bg-[#1c2638] text-white border border-[#26344d] hover:bg-green-600 font-bold py-1.5 rounded text-[9px] uppercase tracking-wider transition">Claim Now</a>
+                </div>
+             </div>
+          </div>
+
+          <div className="mt-8 border-t border-[#1c2638] pt-4">
+            {user.role === 'admin' && (
+              <Link href="/admin" className="flex items-center justify-center gap-2 w-full bg-[#1c2638] text-white px-4 py-3 rounded-md font-bold text-sm transition border border-[#26344d] hover:bg-[#26344d] mb-3">
+                <span>⚡</span> Switch to Master Admin
+              </Link>
+            )}
+            <button onClick={handleLogout} className="flex items-center justify-center gap-2 w-full bg-[#162032] text-gray-400 hover:text-white px-4 py-3 rounded-md font-bold text-sm transition border border-[#26344d] hover:border-red-500 hover:bg-red-500/10">
+              <span>🚪</span> Log Out
+            </button>
+          </div>
         </div>
       </aside>
 
       {/* --- MAIN CONTENT --- */}
-      <main className="flex-1 p-4 md:p-8 md:h-screen md:overflow-y-auto pb-32 relative">
-        <header className="flex justify-between items-center mb-8 bg-[#0d1422] p-5 rounded-xl border border-[#1c2638] shadow-lg">
+      <main className="flex-1 p-4 md:p-8 md:h-screen md:overflow-y-auto pb-32 relative z-10">
+        
+        {/* Mobile Header (Ipo juu ya Main Content kumuonyesha mteja kitufe) */}
+        <div className="md:hidden flex justify-between items-center bg-[#0d1422] p-4 rounded-xl border border-[#1c2638] shadow-lg mb-6">
+           <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gradient-to-tr from-[#1e61d4] to-[#facc15] rounded-full flex items-center justify-center text-white font-bold text-xs">👤</div>
+              <div>
+                 <p className="text-[9px] text-gray-400 uppercase font-bold tracking-widest">Hello</p>
+                 <p className="text-xs text-white font-black truncate">{user.name || "VIP"}</p>
+              </div>
+           </div>
+           <button onClick={() => setIsMobileSidebarOpen(true)} className="bg-[#1c2638] text-white px-4 py-2 rounded-lg text-xs font-bold border border-[#26344d] flex items-center gap-2">
+              ☰ Menu
+           </button>
+        </div>
+
+        <header className="hidden md:flex justify-between items-center mb-8 bg-[#0d1422] p-5 rounded-xl border border-[#1c2638] shadow-lg">
           <div>
             <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-wide">
               {activeTab === "dashboard" && "Today's AI Predictions"}
@@ -356,6 +556,7 @@ export default function Dashboard() {
             {activeTab === "dashboard" && (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    {/* Bet of the Day Box */}
                     <div className="bg-gradient-to-r from-[#1c2638] to-[#0d1422] rounded-xl border border-[#26344d] p-6 shadow-xl relative overflow-hidden">
                         <div className="absolute -right-10 -top-10 w-32 h-32 bg-[#facc15]/10 rounded-full blur-3xl"></div>
                         <div className="flex justify-between items-start mb-4">
@@ -421,7 +622,7 @@ export default function Dashboard() {
               </>
             )}
 
-            {/* TAB 2: VIP SLIPS (CLIENT SIDE) - KUNA MATOKEO YA COMBOS HAPA 🏆 */}
+            {/* TAB 2: VIP SLIPS */}
             {activeTab === "admin" && (
                 <section className="max-w-5xl mx-auto">
                     <div className="bg-gradient-to-r from-yellow-500/20 to-transparent border-l-4 border-[#facc15] p-4 rounded-r-lg mb-6">
@@ -686,9 +887,84 @@ export default function Dashboard() {
           </>
         )}
 
-        {/* FLOATING SLIP */}
+        {/* ========================================== */}
+        {/* PROFESSIONAL FOOTER (DASHBOARD) */}
+        {/* ========================================== */}
+        <footer className="bg-[#090d16] border-t border-[#1c2638] pt-12 pb-24 md:pb-12 mt-20 relative z-10 w-full rounded-t-2xl">
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-10 items-start">
+              
+              {/* 1. Kushoto (Quick Links na Mitandao ya Kijamii) */}
+              <div className="text-center md:text-left flex flex-col items-center md:items-start">
+                 <h4 className="text-white font-black text-[11px] uppercase tracking-widest mb-4 border-b border-[#1c2638] pb-2 inline-block md:block w-full md:w-auto">{t.quickLinks}</h4>
+                 <nav className="flex flex-wrap justify-center md:justify-start gap-x-4 gap-y-2 mb-6">
+                   <Link href="/" className="text-gray-400 hover:text-white text-xs font-bold transition">{t.sports}</Link>
+                   <Link href="/aviator" className="text-gray-400 hover:text-white text-xs font-bold transition">{t.aviator}</Link>
+                   <Link href="/casino" className="text-gray-400 hover:text-white text-xs font-bold transition">{t.casino}</Link>
+                   <Link href="/contact" className="text-gray-400 hover:text-white text-xs font-bold transition">{t.contact}</Link>
+                 </nav>
+
+                 <div className="flex gap-4 justify-center md:justify-start">
+                    <a href="https://whatsapp.com/channel/0029VbCbNM23gvWVS8NV8g3F" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-[#25D366]/10 text-[#25D366] rounded-full flex items-center justify-center text-xl hover:bg-[#25D366] hover:text-white hover:scale-110 transition-all border border-[#25D366]/30">
+                       💬
+                    </a>
+                    <a href="https://www.instagram.com/sly_sports_tips?igsh=ajNycHpobnNqNGl2" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-[#E1306C]/10 text-[#E1306C] rounded-full flex items-center justify-center text-xl hover:bg-[#E1306C] hover:text-white hover:scale-110 transition-all border border-[#E1306C]/30">
+                       📸
+                    </a>
+                 </div>
+              </div>
+
+              {/* 2. Katikati (Logo na Onyo 18+) */}
+              <div className="text-center flex flex-col items-center">
+                 <Link href="/" className="flex items-center gap-2 mb-4 cursor-pointer hover:scale-105 transition-transform">
+                    <div className="w-10 h-10 bg-[#facc15] rounded flex items-center justify-center shadow-[0_0_15px_rgba(250,204,21,0.5)]">
+                        <span className="text-[#070b12] font-bold text-2xl">S</span>
+                    </div>
+                    <span className="text-2xl font-black text-white tracking-wider">SLY<span className="text-[#facc15]">SPORTS</span></span>
+                 </Link>
+                 
+                 <div className="inline-block border-2 border-red-500 rounded-full w-12 h-12 flex items-center justify-center mb-3 shadow-[0_0_15px_rgba(239,68,68,0.3)]">
+                    <span className="text-red-500 font-black text-lg">18+</span>
+                 </div>
+                 
+                 <p className="text-gray-500 text-[10px] leading-relaxed max-w-sm uppercase font-bold tracking-wider">
+                    {t.disclaimerWarn} <br/> {t.disclaimerAge}
+                 </p>
+              </div>
+
+              {/* 3. Kulia (Useful Links / Mamlaka za TZ) */}
+              <div className="text-center md:text-right flex flex-col items-center md:items-end">
+                 <h4 className="text-white font-black text-[11px] uppercase tracking-widest mb-4 border-b border-[#1c2638] pb-2 inline-block md:block w-full md:w-auto">{t.usefulLinks}</h4>
+                 <div className="flex flex-col items-center md:items-end gap-3">
+                    <a href="https://www.fiu.go.tz/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#1e61d4] transition text-xs font-bold flex items-center justify-center md:justify-end gap-2 group">
+                       <span className="text-lg group-hover:scale-110 transition-transform">⚖️</span> Financial Intelligence Unit (FIU)
+                    </a>
+                    <a href="https://www.gamingboard.go.tz/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#facc15] transition text-xs font-bold flex items-center justify-center md:justify-end gap-2 group">
+                       <span className="text-lg group-hover:scale-110 transition-transform">🎰</span> Gaming Board of Tanzania
+                    </a>
+                    <a href="https://www.tcra.go.tz/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#25D366] transition text-xs font-bold flex items-center justify-center md:justify-end gap-2 group">
+                       <span className="text-lg group-hover:scale-110 transition-transform">📡</span> TCRA Tanzania
+                    </a>
+                    <a href="#" className="text-gray-400 hover:text-red-500 transition text-xs font-bold flex items-center justify-center md:justify-end gap-2 group">
+                       <span className="text-lg group-hover:scale-110 transition-transform">🛑</span> {lang === 'en' ? 'Responsible Gaming' : 'Cheza Kistaarabu'}
+                    </a>
+                 </div>
+              </div>
+
+            </div>
+            
+            {/* Haki Miliki */}
+            <div className="border-t border-[#1c2638] mt-10 pt-6 text-center">
+               <p className="text-gray-600 text-[9px] sm:text-[10px] uppercase font-bold tracking-widest">
+                 © {new Date().getFullYear()} SLYSPORTS TIPS. {lang === 'en' ? 'ALL RIGHTS RESERVED.' : 'HAKI ZOTE ZIMEHIFADHIWA.'}
+               </p>
+            </div>
+          </div>
+        </footer>
+
+        {/* FLOATING SLIP (DASHBOARD ONLY) */}
         {betslip.length > 0 && activeTab === "dashboard" && (
-          <div className={`fixed bottom-0 md:bottom-5 right-0 md:right-5 w-full md:w-80 bg-[#0d1422] md:border border-[#1e61d4] rounded-t-xl md:rounded-xl shadow-[0_-10px_40px_rgba(0,0,0,0.8)] md:shadow-[0_10px_50px_rgba(30,97,212,0.3)] z-50 transition-transform duration-300 ${isSlipOpen ? 'translate-y-0' : 'translate-y-[calc(100%-60px)]'}`}>
+          <div className={`fixed bottom-0 md:bottom-5 right-0 md:right-5 w-full md:w-80 bg-[#0d1422] md:border border-[#1e61d4] rounded-t-xl md:rounded-xl shadow-[0_-10px_40px_rgba(0,0,0,0.8)] md:shadow-[0_10px_50px_rgba(30,97,212,0.3)] z-[95] transition-transform duration-300 ${isSlipOpen ? 'translate-y-0' : 'translate-y-[calc(100%-60px)]'}`}>
             <div onClick={() => setIsSlipOpen(!isSlipOpen)} className="bg-[#1e61d4] text-white p-4 md:rounded-t-xl cursor-pointer flex justify-between items-center font-black uppercase text-sm"><span>🎟️ Betslip ({betslip.length})</span><span>{isSlipOpen ? '▼' : '▲'}</span></div>
             <div className="p-4 bg-[#162032] max-h-[40vh] md:max-h-64 overflow-y-auto custom-scrollbar">
               {betslip.map((m, i) => (
@@ -706,11 +982,29 @@ export default function Dashboard() {
         )}
       </main>
       
+      {/* MOBILE BOTTOM NAV */}
+      <nav className="xl:hidden fixed bottom-0 left-0 w-full bg-[#0d1422] border-t border-[#1c2638] flex justify-around items-center py-3 px-2 z-[90] shadow-[0_-5px_15px_rgba(0,0,0,0.5)]">
+         <button onClick={() => {setActiveTab("dashboard"); setIsMobileSidebarOpen(false);}} className={`flex flex-col items-center gap-1 transition ${activeTab === "dashboard" ? "text-[#1e61d4]" : "text-gray-500 hover:text-[#facc15]"}`}><span className="text-xl">📊</span><span className="text-[9px] font-bold uppercase">Picks</span></button>
+         <button onClick={() => {setActiveTab("admin"); setIsMobileSidebarOpen(false);}} className={`flex flex-col items-center gap-1 transition ${activeTab === "admin" ? "text-[#facc15]" : "text-gray-500 hover:text-[#facc15]"}`}><span className="text-xl">👑</span><span className="text-[9px] font-bold uppercase">VIP</span></button>
+         <button onClick={() => {setActiveTab("builder"); setIsMobileSidebarOpen(false);}} className={`flex flex-col items-center gap-1 transition ${activeTab === "builder" ? "text-[#1e61d4]" : "text-gray-500 hover:text-[#facc15]"}`}>
+            <span className="text-xl relative">🎟️ {betslip.length > 0 && <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[8px] rounded-full w-4 h-4 flex items-center justify-center font-black">{betslip.length}</span>}</span>
+            <span className="text-[9px] font-bold uppercase">Builder</span>
+         </button>
+         <button onClick={() => {setActiveTab("results"); setIsMobileSidebarOpen(false);}} className={`flex flex-col items-center gap-1 transition ${activeTab === "results" ? "text-green-500" : "text-gray-500 hover:text-[#facc15]"}`}><span className="text-xl">✅</span><span className="text-[9px] font-bold uppercase">Results</span></button>
+      </nav>
+
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { height: 4px; width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #0d1422; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #1c2638; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #1e61d4; }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.3s ease-out forwards;
+        }
       `}</style>
     </div>
   );
