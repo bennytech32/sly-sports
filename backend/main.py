@@ -2,6 +2,8 @@ import httpx
 import hashlib
 import psycopg
 import os
+import secrets
+import resend
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from datetime import date, timedelta, datetime
@@ -9,8 +11,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from psycopg import IntegrityError
 
 # ==========================================
-# 1. NEON DATABASE CONNECTION (LIVE)
+# 1. API KEYS & DATABASE CONNECTION (LIVE)
 # ==========================================
+resend.api_key = os.getenv("RESEND_API_KEY")
+
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://neondb_owner:npg_cVuy3hBvPr0Q@ep-wandering-wind-ambvtomk-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
 
 def get_db_connection():
@@ -64,6 +68,9 @@ class AdminSlipCreate(BaseModel):
     odds: str
     code: str
     bookmaker: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
 
 def hash_password(password: str):
     return hashlib.sha256(password.encode()).hexdigest()
@@ -139,6 +146,37 @@ def login_user(user: UserLogin):
     conn.close()
     if result: return {"status": "success", "user": {"id": result[0], "name": result[1], "phone": result[2]}}
     raise HTTPException(status_code=401, detail="Kuingia kumeshindikana. Namba au Password si sahihi.")
+
+@app.post("/api/forgot-password")
+def forgot_password(request: ForgotPasswordRequest):
+    # Tengeneza Token ya siri
+    reset_token = secrets.token_urlsafe(32)
+    
+    # Andaa Link ya kutuma kwa mteja
+    reset_link = f"https://slysports.co.tz/reset-password?token={reset_token}"
+    
+    try:
+        params = {
+            "from": "SlySports VIP <support@slysports.co.tz>",
+            "to": [request.email],
+            "subject": "Rudisha Neno Lako la Siri - SlySports",
+            "html": f"""
+            <div style="font-family: Arial, sans-serif; text-align: center; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #1c2638; border-radius: 10px; background-color: #070b12; color: #f3f4f6;">
+                <h2 style="color: #facc15;">SLYSPORTS PREMIUM</h2>
+                <p>Habari,</p>
+                <p>Tumepewa ombi la kubadilisha neno la siri la akaunti yako. Bonyeza link hapo chini kutengeneza password mpya:</p>
+                <a href="{reset_link}" style="background-color: #1e61d4; color: white; padding: 12px 25px; text-decoration: none; font-weight: bold; border-radius: 5px; display: inline-block; margin-top: 15px;">Badilisha Password</a>
+                <p style="margin-top: 30px; font-size: 11px; color: #9ca3af;">Kama hukuomba kubadili password, tafadhali puuza ujumbe huu au wasiliana na huduma kwa wateja.</p>
+            </div>
+            """
+        }
+        
+        email_response = resend.Emails.send(params)
+        return {"status": "success", "message": "Email imetumwa kikamilifu"}
+        
+    except Exception as e:
+        print(f"Resend Error: {e}")
+        raise HTTPException(status_code=500, detail="Imeshindwa kutuma barua pepe. Jaribu tena.")
 
 @app.get("/api/mikeka")
 async def pata_mikeka():

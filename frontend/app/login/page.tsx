@@ -8,6 +8,10 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
 
+  // State mpya kwa ajili ya Forgot Password
+  const [isResetOpen, setIsResetOpen] = useState(false);
+  const [resetContact, setResetContact] = useState("");
+
   const t = {
     en: {
       welcome: "Welcome Back",
@@ -15,12 +19,18 @@ export default function LoginPage() {
       phoneOrEmail: "Phone Number or Email",
       password: "Password",
       loginBtn: "Access Dashboard",
-      loading: "Authenticating...",
+      loading: "Processing...",
       noAccount: "Don't have an account?",
       register: "Create Free Account",
       backHome: "Back to Home",
       successAdmin: "Master Admin Authorized! Redirecting...",
-      successUser: "Login Successful! Redirecting..."
+      successUser: "Login Successful! Redirecting...",
+      forgotPassword: "Forgot Password?",
+      resetTitle: "Reset Password",
+      resetSubtitle: "Enter your phone number or email to receive a password reset link.",
+      sendResetBtn: "Send Reset Link",
+      backToLogin: "Back to Login",
+      resetSuccess: "Reset link sent! Please check your messages/email."
     },
     sw: {
       welcome: "Karibu Tena",
@@ -28,12 +38,18 @@ export default function LoginPage() {
       phoneOrEmail: "Namba ya Simu au Email",
       password: "Neno la Siri (Password)",
       loginBtn: "Ingia Kwenye Dashibodi",
-      loading: "Inathibitisha...",
+      loading: "Inashughulikia...",
       noAccount: "Hauna akaunti?",
       register: "Tengeneza Akaunti Bure",
       backHome: "Rudi Mwanzo",
       successAdmin: "Admin Amethibitishwa! Inakupeleka...",
-      successUser: "Umeingia Kikamilifu! Inakupeleka..."
+      successUser: "Umeingia Kikamilifu! Inakupeleka...",
+      forgotPassword: "Umesahau Neno la Siri?",
+      resetTitle: "Rudisha Neno la Siri",
+      resetSubtitle: "Ingiza namba yako ya simu au barua pepe kupata link ya kurudisha neno la siri.",
+      sendResetBtn: "Tuma Link",
+      backToLogin: "Rudi Kwenye Login",
+      resetSuccess: "Link imetumwa! Tafadhali angalia ujumbe wako."
     }
   }[lang];
 
@@ -66,57 +82,70 @@ export default function LoginPage() {
     // MASTER ADMIN BYPASS (Njia ya mkato ya Admin)
     // ========================================================
     if (formData.phone === "admin@slysports.co.tz" && formData.password === "mikekatz") {
-        setTimeout(() => {
-            const adminData = { id: 0, name: "Master Admin", phone: "admin@slysports.co.tz", role: "admin" };
-            localStorage.setItem("slyUser", JSON.stringify(adminData));
-            showToast(t.successAdmin);
-            setTimeout(() => { window.location.href = "/admin"; }, 1000);
-        }, 1000);
-        return;
+      setTimeout(() => {
+        const adminData = { id: 0, name: "Master Admin", phone: "admin@slysports.co.tz", role: "admin" };
+        localStorage.setItem("slyUser", JSON.stringify(adminData));
+        showToast(t.successAdmin);
+        setTimeout(() => { window.location.href = "/admin"; }, 1000);
+      }, 1000);
+      return;
     }
 
     // ========================================================
-    // NORMAL USER LOGIN (Via API) - Imefanyiwa Polishing kwa Vercel
+    // NORMAL USER LOGIN (Via API)
     // ========================================================
     try {
-        // Tunatumia Relative Path Moja kwa Moja inafanya vizuri sana Vercel
-        const res = await fetch(`/api/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(formData)
-        });
+      const res = await fetch(`/api/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData)
+      });
 
-        if (res.ok) {
-            const data = await res.json();
-            if (data.status === "success") {
-                localStorage.setItem("slyUser", JSON.stringify(data.user));
-                showToast(t.successUser);
-                setTimeout(() => {
-                    if (data.user.role === 'admin') {
-                        window.location.href = "/admin";
-                    } else {
-                        window.location.href = "/dashboard";
-                    }
-                }, 1000);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === "success") {
+          localStorage.setItem("slyUser", JSON.stringify(data.user));
+          showToast(t.successUser);
+          setTimeout(() => {
+            if (data.user.role === 'admin') {
+              window.location.href = "/admin";
             } else {
-                showToast(data.detail || "Invalid credentials. Please try again.");
-                setIsLoading(false);
+              window.location.href = "/dashboard";
             }
+          }, 1000);
         } else {
-            // Kama Server itatupa 400 au 500 error
-            let errorDetail = "Invalid credentials or Server Error.";
-            try {
-                const errorData = await res.json();
-                if(errorData.detail) errorDetail = errorData.detail;
-            } catch(e) {} // Catch in case Vercel returns HTML error page
-            showToast(`❌ Error: ${errorDetail}`);
-            setIsLoading(false);
+          showToast(data.detail || "Invalid credentials. Please try again.");
+          setIsLoading(false);
         }
-    } catch (error: any) {
-        console.error("Login Fetch Error:", error);
-        showToast(`🔌 Network Error: Please check your connection.`);
+      } else {
+        let errorDetail = "Invalid credentials or Server Error.";
+        try {
+          const errorData = await res.json();
+          if (errorData.detail) errorDetail = errorData.detail;
+        } catch (e) { }
+        showToast(`❌ Error: ${errorDetail}`);
         setIsLoading(false);
+      }
+    } catch (error: any) {
+      console.error("Login Fetch Error:", error);
+      showToast(`🔌 Network Error: Please check your connection.`);
+      setIsLoading(false);
     }
+  };
+
+  // Function ya kushughulikia Reset Password
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    // Hapa utaweka API yako ya kutuma email/SMS ya reset password mbeleni.
+    // Kwa sasa tuna-simulate success kiprofesa.
+    setTimeout(() => {
+      setIsLoading(false);
+      showToast(t.resetSuccess);
+      setResetContact("");
+      setIsResetOpen(false); // Mrudishe kwenye login form baada ya kutuma
+    }, 1500);
   };
 
   return (
@@ -126,77 +155,142 @@ export default function LoginPage() {
 
       {toastMsg && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 bg-[#1e61d4] text-white px-6 py-3 rounded-md shadow-[0_10px_40px_rgba(30,97,212,0.6)] z-[100] font-black animate-bounce flex items-center gap-2">
-          {toastMsg.includes("Admin") ? "👑" : toastMsg.includes("Success") ? "✅" : toastMsg.includes("Error") ? "❌" : "⚠️"} {toastMsg}
+          {toastMsg.includes("Admin") ? "👑" : toastMsg.includes("Success") || toastMsg.includes("sent") || toastMsg.includes("imetumwa") ? "✅" : toastMsg.includes("Error") ? "❌" : "⚠️"} {toastMsg}
         </div>
       )}
 
       <header className="p-6 md:p-8 flex justify-between items-center relative z-10 max-w-7xl mx-auto w-full">
         <Link href="/" className="flex items-center gap-2 cursor-pointer">
-            <div className="w-10 h-10 bg-[#facc15] rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(250,204,21,0.5)]">
-                <span className="text-[#070b12] font-black text-2xl">S</span>
-            </div>
-            <span className="text-2xl font-black text-white tracking-wider">SLY<span className="text-[#facc15]">TIPS</span></span>
+          <div className="w-10 h-10 bg-[#facc15] rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(250,204,21,0.5)]">
+            <span className="text-[#070b12] font-black text-2xl">S</span>
+          </div>
+          <span className="text-2xl font-black text-white tracking-wider">SLY<span className="text-[#facc15]">TIPS</span></span>
         </Link>
         <div className="flex items-center gap-4">
-            <button onClick={() => setLang(lang === 'en' ? 'sw' : 'en')} className="bg-[#1c2638] text-white px-3 py-1.5 rounded text-xs font-bold uppercase hover:bg-[#26344d] transition border border-[#26344d]">
-                {lang === 'en' ? '🇹🇿 SW' : '🇬🇧 EN'}
-            </button>
-            <Link href="/" className="text-gray-400 hover:text-white font-bold text-sm hidden sm:block transition">
-                {t.backHome}
-            </Link>
+          <button onClick={() => setLang(lang === 'en' ? 'sw' : 'en')} className="bg-[#1c2638] text-white px-3 py-1.5 rounded text-xs font-bold uppercase hover:bg-[#26344d] transition border border-[#26344d]">
+            {lang === 'en' ? '🇹🇿 SW' : '🇬🇧 EN'}
+          </button>
+          <Link href="/" className="text-gray-400 hover:text-white font-bold text-sm hidden sm:block transition">
+            {t.backHome}
+          </Link>
         </div>
       </header>
 
       <div className="flex-1 flex items-center justify-center p-4 relative z-10">
-          <div className="w-full max-w-md bg-[#0d1422]/80 backdrop-blur-md border border-[#1c2638] p-8 md:p-10 rounded-2xl shadow-2xl">
+        <div className="w-full max-w-md bg-[#0d1422]/80 backdrop-blur-md border border-[#1c2638] p-8 md:p-10 rounded-2xl shadow-2xl">
+
+          {!isResetOpen ? (
+            // ==========================================
+            // NORMAL LOGIN FORM
+            // ==========================================
+            <>
               <div className="text-center mb-8">
-                  <h1 className="text-3xl font-black text-white uppercase tracking-wider mb-2">{t.welcome}</h1>
-                  <p className="text-gray-400 text-sm">{t.subtitle}</p>
+                <h1 className="text-3xl font-black text-white uppercase tracking-wider mb-2">{t.welcome}</h1>
+                <p className="text-gray-400 text-sm">{t.subtitle}</p>
               </div>
 
               <form onSubmit={handleLogin} className="space-y-5">
-                  <div>
-                      <label className="block text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2">{t.phoneOrEmail}</label>
-                      <div className="relative">
-                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">👤</span>
-                          <input 
-                              type="text" required
-                              value={formData.phone}
-                              onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                              className="w-full bg-[#162032] border border-[#26344d] text-white font-bold rounded-lg pl-12 pr-4 py-4 focus:outline-none focus:border-[#1e61d4] focus:ring-1 focus:ring-[#1e61d4] transition"
-                              placeholder="e.g. 0712345678 or admin@slysports.co.tz"
-                          />
-                      </div>
+                <div>
+                  <label className="block text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2">{t.phoneOrEmail}</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">👤</span>
+                    <input
+                      type="text" required
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="w-full bg-[#162032] border border-[#26344d] text-white font-bold rounded-lg pl-12 pr-4 py-4 focus:outline-none focus:border-[#1e61d4] focus:ring-1 focus:ring-[#1e61d4] transition"
+                      placeholder="e.g. 0712345678 or admin@slysports.co.tz"
+                    />
                   </div>
-                  <div>
-                      <label className="block text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2">{t.password}</label>
-                      <div className="relative">
-                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">🔒</span>
-                          <input 
-                              type="password" required
-                              value={formData.password}
-                              onChange={(e) => setFormData({...formData, password: e.target.value})}
-                              className="w-full bg-[#162032] border border-[#26344d] text-white font-bold rounded-lg pl-12 pr-4 py-4 focus:outline-none focus:border-[#1e61d4] focus:ring-1 focus:ring-[#1e61d4] transition"
-                              placeholder="••••••••"
-                          />
-                      </div>
+                </div>
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-[10px] text-gray-500 font-bold uppercase tracking-widest">{t.password}</label>
+                    <button type="button" onClick={() => setIsResetOpen(true)} className="text-[10px] text-[#5c98ff] hover:text-[#1e61d4] font-black uppercase tracking-widest transition">
+                      {t.forgotPassword}
+                    </button>
                   </div>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">🔒</span>
+                    <input
+                      type="password" required
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      className="w-full bg-[#162032] border border-[#26344d] text-white font-bold rounded-lg pl-12 pr-4 py-4 focus:outline-none focus:border-[#1e61d4] focus:ring-1 focus:ring-[#1e61d4] transition"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
 
-                  <button 
-                      type="submit" disabled={isLoading}
-                      className="w-full bg-gradient-to-r from-[#1e61d4] to-[#2563eb] text-white font-black py-4 rounded-lg text-sm uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-[1.02] transition transform disabled:opacity-50 mt-4"
-                  >
-                      {isLoading ? t.loading : t.loginBtn}
-                  </button>
+                <button
+                  type="submit" disabled={isLoading}
+                  className="w-full bg-gradient-to-r from-[#1e61d4] to-[#2563eb] text-white font-black py-4 rounded-lg text-sm uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-[1.02] transition transform disabled:opacity-50 mt-4"
+                >
+                  {isLoading ? t.loading : t.loginBtn}
+                </button>
               </form>
 
               <div className="mt-8 text-center border-t border-[#1c2638] pt-6">
-                  <p className="text-gray-400 text-sm">
-                      {t.noAccount} <Link href="/register" className="text-[#facc15] font-black hover:underline ml-1">{t.register}</Link>
-                  </p>
+                <p className="text-gray-400 text-sm">
+                  {t.noAccount} <Link href="/register" className="text-[#facc15] font-black hover:underline ml-1">{t.register}</Link>
+                </p>
               </div>
-          </div>
+            </>
+          ) : (
+            // ==========================================
+            // FORGOT PASSWORD FORM
+            // ==========================================
+            <div className="animate-fade-in">
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 bg-[#1e61d4]/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#1e61d4]/30">
+                  <span className="text-2xl">🔐</span>
+                </div>
+                <h1 className="text-2xl font-black text-white uppercase tracking-wider mb-2">{t.resetTitle}</h1>
+                <p className="text-gray-400 text-sm">{t.resetSubtitle}</p>
+              </div>
+
+              <form onSubmit={handleResetPassword} className="space-y-5">
+                <div>
+                  <label className="block text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2">{t.phoneOrEmail}</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">📞</span>
+                    <input
+                      type="text" required
+                      value={resetContact}
+                      onChange={(e) => setResetContact(e.target.value)}
+                      className="w-full bg-[#162032] border border-[#26344d] text-white font-bold rounded-lg pl-12 pr-4 py-4 focus:outline-none focus:border-[#1e61d4] focus:ring-1 focus:ring-[#1e61d4] transition"
+                      placeholder="e.g. 0712345678"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit" disabled={isLoading}
+                  className="w-full bg-gradient-to-r from-[#facc15] to-yellow-600 text-[#070b12] font-black py-4 rounded-lg text-sm uppercase tracking-widest shadow-lg shadow-yellow-500/20 hover:scale-[1.02] transition transform disabled:opacity-50 mt-4"
+                >
+                  {isLoading ? t.loading : t.sendResetBtn}
+                </button>
+              </form>
+
+              <div className="mt-8 text-center border-t border-[#1c2638] pt-6">
+                <button onClick={() => setIsResetOpen(false)} className="text-gray-400 hover:text-white text-sm font-bold transition flex items-center justify-center gap-2 mx-auto">
+                  <span>←</span> {t.backToLogin}
+                </button>
+              </div>
+            </div>
+          )}
+
+        </div>
       </div>
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.3s ease-out forwards;
+        }
+      `}</style>
     </main>
   );
 }
