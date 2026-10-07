@@ -467,18 +467,21 @@ export default function Dashboard() {
                 </div>
              </div>
 
-             {/* Meridianbet */}
+             {/* MLBT */}
              <div className="bg-[#0d1422] border border-[#1c2638] rounded-xl overflow-hidden shadow-lg group">
-                <div className="bg-red-600 p-2 flex items-center justify-center gap-2">
-                   <span className="text-white font-black text-[10px] uppercase tracking-wider">🔴 Meridianbet</span>
+                <div className="bg-[#1e61d4] p-2 flex items-center justify-center gap-2">
+                   <span className="text-white font-black text-[10px] uppercase tracking-wider">🔵 MLBT Partner</span>
                 </div>
                 <div className="p-3 text-center">
-                   <p className="text-white font-bold text-xs mb-2">NEW USER BONUS</p>
+                   <p className="text-white font-bold text-xs mb-2">EXCLUSIVE BONUS</p>
                    <div className="bg-[#162032] border border-[#26344d] p-1.5 rounded flex justify-between items-center mb-2">
                       <span className="text-[9px] text-gray-500 uppercase">CODE:</span>
-                      <span className="text-[10px] font-black text-red-500">SYLSPORTS</span>
+                      <span className="text-[10px] font-black text-[#60a5fa]">SLYSPORTS</span>
                    </div>
-                   <a href={lang === 'en' ? 'https://meridianbet.co.tz/en/sign-up' : 'https://meridianbet.co.tz/sw/jisajili'} target="_blank" rel="noopener noreferrer" className="block w-full bg-[#1c2638] text-white border border-[#26344d] hover:bg-red-600 font-bold py-1.5 rounded text-[9px] uppercase tracking-wider transition">Claim Now</a>
+                   <div className="flex flex-col gap-1.5">
+                      <a href="https://mlbt.cc/4ATVYPe" target="_blank" rel="noopener noreferrer" className="block w-full bg-[#1c2638] text-white border border-[#26344d] hover:bg-[#1e61d4] font-bold py-1.5 rounded text-[9px] uppercase tracking-wider transition">Register</a>
+                      <a href="https://mlbt.cc/4jGkWeP" target="_blank" rel="noopener noreferrer" className="block w-full bg-transparent text-gray-400 hover:text-white border border-[#26344d] hover:bg-[#26344d] font-bold py-1.5 rounded text-[9px] uppercase tracking-wider transition">Get APK</a>
+                   </div>
                 </div>
              </div>
 
